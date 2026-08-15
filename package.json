@@ -1,0 +1,9 @@
+{
+  "name": "billing-master",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Billing Master - chia tiền nhóm, chạy trên Vercel (Serverless Functions + Vercel KV)",
+  "dependencies": {
+    "@vercel/kv": "^1.0.1"
+  }
+}
