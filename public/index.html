@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Billing Master - Google Style</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js" crossorigin="anonymous"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lexend:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+  <style>
+    body, input, select, button, td, th { font-family: 'Inter', sans-serif; letter-spacing: -0.01em; }
+    h1, h2, h3, h6, .btn-cam { font-family: 'Lexend', sans-serif; }
+    :root { --google-red: #EA4335; --google-red-dark: #D93025; --google-blue: #4285F4; --border-color: #DADCE0; }
+    body { background-color: #F8F9FA; color: #3C4043; }
+    .app-card { background: white; border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; transition: 0.3s; }
+    .app-card:hover { box-shadow: 0 1px 3px rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15); }
+    .btn-cam { background-color: var(--google-red); color: white; border: none; font-weight: 600; border-radius: 24px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-cam:hover { background-color: var(--google-red-dark); transform: translateY(-1px); color: white; box-shadow: 0 1px 3px rgba(60,64,67,0.3); }
+    .table-container { border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; background: white; }
+    .table-matrix { font-size: 13px; width: 100%; border-collapse: separate; border-spacing: 0; min-width: 700px; }
+    .table-matrix thead th { background-color: #F8F9FA; color: #5F6368; font-weight: 600; font-size: 11px; padding: 16px 10px; border-bottom: 1px solid var(--border-color); text-transform: uppercase; }
+    .table-matrix td { padding: 14px 10px; border-bottom: 1px solid #F1F3F4; vertical-align: middle; }
+    .sticky-col { position: sticky; left: 0; background: #fff !important; z-index: 10; font-weight: 600; border-right: 1px solid var(--border-color) !important; }
+    .no-sticky { position: static !important; border-right: 1px solid #F1F3F4 !important; }
+    .col-money { font-weight: 700; color: #174EA6; font-size: 14px; }
+    .row-final td { border-top: 2px solid var(--border-color) !important; font-weight: 700; background-color: #F8F9FA !important; }
+    .badge-nhan { background-color: #E6F4EA; color: #137333; padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 11px; white-space: nowrap; }
+    .badge-dong { background-color: #FCE8E6; color: #C5221F; padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 11px; white-space: nowrap; }
+    #loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; }
+    .btn-delete { color: #5f6368; transition: 0.2s; padding: 5px 10px; border-radius: 50%; }
+    .btn-delete:hover { color: var(--google-red); background: #fce8e6; }
+  </style>
+</head>
+<body class="p-3">
+
+  <div id="loading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-3 font-semibold text-stone-600 uppercase text-xs">Đang đồng bộ dữ liệu...</p>
+  </div>
+
+  <div class="max-w-7xl mx-auto">
+    <div id="loginArea" class="text-center py-20">
+      <div class="mb-4"><i class="fa-solid fa-file-invoice-dollar fa-4x" style="color: var(--google-blue);"></i></div>
+      <h1 class="text-4xl font-extrabold text-stone-800 mb-2">Billing Master</h1>
+      <p class="text-stone-500 mb-10 text-sm">Hệ thống quản lý bởi nghia.huynh • version 2026</p>
+      <div class="max-w-md mx-auto p-2 bg-white rounded-full shadow-lg flex gap-2 border">
+        <input type="text" id="groupId" onkeyup="if(event.key === 'Enter') loadGroup()" class="form-control border-0 focus:ring-0 font-semibold px-5 rounded-full" placeholder="Nhập mã nhóm...">
+        <button onclick="loadGroup()" class="btn btn-cam px-8 py-2">Truy cập</button>
+      </div>
+    </div>
+
+    <div id="mainApp" style="display:none;">
+      <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <h2 class="text-2xl font-bold text-stone-800 flex items-center gap-3">
+          <i class="fa-solid fa-folder-open" style="color: #FBBC04;"></i> <span id="displayGroupId"></span>
+        </h2>
+        <div class="flex gap-2">
+          <button onclick="loadGroup()" class="btn btn-light border font-semibold btn-sm rounded-pill px-4"><i class="fa-solid fa-rotate"></i> Làm mới</button>
+          <button onclick="downloadTable()" class="btn btn-dark font-semibold btn-sm rounded-pill px-4"><i class="fa-solid fa-camera me-2"></i> LƯU ẢNH (JPG)</button>
+          <button onclick="exitGroup()" class="btn btn-outline-danger font-semibold btn-sm rounded-pill border-0 px-4"><i class="fa-solid fa-power-off"></i> Thoát</button>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-4 space-y-4">
+          <div class="app-card border">
+            <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Thành viên</h6>
+            <div class="flex gap-2 mb-4">
+              <input type="text" id="userName" onkeyup="if(event.key === 'Enter') addUser()" class="form-control" placeholder="Tên người mới...">
+              <button onclick="addUser()" class="btn btn-cam px-4"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <div id="userTags" class="flex flex-wrap gap-2"></div>
+          </div>
+
+          <div class="app-card border">
+            <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Hóa đơn mới</h6>
+            <div class="space-y-3">
+              <input type="text" id="expDesc" class="form-control" placeholder="Nội dung chi...">
+              <input type="number" id="expAmount" class="form-control font-bold" placeholder="Số tiền" oninput="recalcExact()">
+              <select id="expPayer" class="form-select font-semibold text-stone-600"></select>
+              <div class="p-3 border rounded-xl bg-gray-50/50">
+                <div class="flex justify-between items-center mb-3">
+                   <span class="text-[10px] font-bold text-stone-400 uppercase">Chia tiền</span>
+                   <div class="flex gap-3 text-[11px] font-bold">
+                     <label class="cursor-pointer"><input type="radio" name="splitMode" value="EQUAL" checked onchange="toggleSplit()"> ĐỀU</label>
+                     <label class="cursor-pointer"><input type="radio" name="splitMode" value="EXACT" onchange="toggleSplit()"> TÙY CHỈNH</label>
+                   </div>
+                </div>
+                <div id="areaEqual" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto"></div>
+                <div id="areaExact" class="hidden space-y-2 max-h-40 overflow-y-auto"></div>
+              </div>
+              <button onclick="addExpense()" class="w-full btn btn-cam py-3 shadow-sm uppercase text-xs">Xác nhận chi <i class="fa-solid fa-check ms-2"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-8">
+          <div id="captureArea" class="bg-white p-5 rounded-[24px] border shadow-sm">
+            <div class="flex justify-between items-center mb-6 px-1">
+                <div>
+                  <h3 class="text-sm font-bold text-stone-800 mb-1">Báo cáo chi tiết</h3>
+                  <p class="text-[10px] text-stone-400 uppercase font-semibold">© 2026 Billing Master • nghia.huynh</p>
+                </div>
+                <i class="fa-solid fa-receipt text-stone-200 fa-2x"></i>
+            </div>
+            <div class="table-container" id="tContainer">
+              <table class="table-matrix text-center align-middle" id="mainTable">
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+                <tfoot id="tableFoot"></tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentG = "";
+    let localData = { users: [], expenses: [] };
+
+    const showLoad = (v) => document.getElementById('loading').style.display = v ? 'flex' : 'none';
+
+    // ---- Backend helpers (Vercel /api/data thay cho google.script.run) ----
+    async function apiGetGroup(gid) {
+      const res = await fetch(`/api/data?groupId=${encodeURIComponent(gid)}`);
+      if (!res.ok) throw new Error('Không tải được dữ liệu nhóm');
+      return res.json();
+    }
+
+    async function apiPost(payload) {
+      const res = await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Lỗi khi lưu dữ liệu');
+      return res.json();
+    }
+
+    function loadGroup() {
+      const gid = document.getElementById('groupId').value.trim().toLowerCase();
+      if (!gid) return alert("Vui lòng nhập mã nhóm!");
+
+      showLoad(true);
+      apiGetGroup(gid)
+        .then(data => {
+          showLoad(false);
+          if (data.users.length === 0 && data.expenses.length === 0) {
+            if (confirm(`Nhóm "${gid}" chưa có dữ liệu. Bạn có muốn tạo mới nhóm này không?`)) {
+              currentG = gid;
+              localData = { users: [], expenses: [] };
+              render();
+              openApp();
+            }
+          } else {
+            currentG = gid;
+            localData = data;
+            render();
+            openApp();
+          }
+        })
+        .catch(err => {
+          showLoad(false);
+          alert(err.message);
+        });
+    }
+
+    function openApp() {
+      document.getElementById('loginArea').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      document.getElementById('displayGroupId').innerText = currentG.toUpperCase();
+    }
+
+    function exitGroup() {
+      document.getElementById('mainApp').style.display = 'none';
+      document.getElementById('loginArea').style.display = 'block';
+      document.getElementById('groupId').value = "";
+    }
+
+    function addUser() {
+      const n = document.getElementById('userName').value.trim();
+      if(!n || localData.users.includes(n)) return;
+      localData.users.push(n);
+      render();
+      apiPost({ action: 'addUser', groupId: currentG, userName: n }).catch(err => alert(err.message));
+      document.getElementById('userName').value = "";
+    }
+
+    function toggleSplit() {
+      const m = document.querySelector('input[name="splitMode"]:checked').value;
+      document.getElementById('areaEqual').classList.toggle('hidden', m !== "EQUAL");
+      document.getElementById('areaExact').classList.toggle('hidden', m === "EQUAL");
+
+      if (m === "EXACT") recalcExact();
+    }
+
+    function addExpense() {
+      const d = document.getElementById('expDesc').value.trim();
+      const a = parseFloat(document.getElementById('expAmount').value);
+      const p = document.getElementById('expPayer').value;
+      if(!d || !a || !p) return alert("Thiếu thông tin hóa đơn!");
+
+      let owes = {};
+      const m = document.querySelector('input[name="splitMode"]:checked').value;
+      if(m === "EQUAL") {
+        const sel = Array.from(document.querySelectorAll('.p-check:checked')).map(c => c.value);
+        if(sel.length === 0) return alert("Chưa chọn người chịu tiền!");
+        sel.forEach(u => owes[u] = a / sel.length);
+      } else {
+        document.querySelectorAll('.exact-in').forEach(i => { if(i.value > 0) owes[i.dataset.user] = parseFloat(i.value); });
+      }
+
+      const newExp = {desc: d, amount: a, payer: p, splitDetails: JSON.stringify(owes)};
+      localData.expenses.push(newExp);
+      render();
+      apiPost({ action: 'addExpense', groupId: currentG, ...newExp }).catch(err => alert(err.message));
+
+      document.getElementById('expDesc').value = "";
+      document.getElementById('expAmount').value = "";
+    }
+
+    function handleExactInput(el) {
+      if (el.value !== "") {
+        el.dataset.manual = "true";
+      } else {
+        el.dataset.manual = "false";
+      }
+      recalcExact();
+    }
+
+    function recalcExact() {
+      const totalAmount = parseFloat(document.getElementById('expAmount').value) || 0;
+      const inputs = Array.from(document.querySelectorAll('.exact-in'));
+
+      let manualSum = 0;
+      let autoInputs = [];
+
+      inputs.forEach(inp => {
+        if (inp.dataset.manual === "true") {
+          manualSum += parseFloat(inp.value) || 0;
+        } else {
+          autoInputs.push(inp);
+        }
+      });
+
+      if (autoInputs.length > 0) {
+        let remaining = totalAmount - manualSum;
+        let splitValue = remaining / autoInputs.length;
+
+        autoInputs.forEach(inp => {
+          inp.value = splitValue > 0 ? Math.round(splitValue) : 0;
+        });
+      }
+    }
+
+    function deleteExpense(idx, desc, amount) {
+      if(!confirm(`Xóa khoản chi: "${desc}"?`)) return;
+      localData.expenses.splice(idx, 1);
+      render();
+      apiPost({ action: 'deleteExpense', groupId: currentG, desc, amount }).catch(err => alert(err.message));
+    }
+
+    function render() {
+      const {users, expenses} = localData;
+      document.getElementById('userTags').innerHTML = users.map(u => `<span class="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full text-[11px] font-semibold border">${u}</span>`).join('');
+      document.getElementById('expPayer').innerHTML = '<option value="">-- Ai trả? --</option>' + users.map(u => `<option value="${u}">${u}</option>`).join('');
+      document.getElementById('areaEqual').innerHTML = users.map(u => `<label class="flex items-center gap-2 border p-2 rounded-lg bg-white text-[11px] font-semibold cursor-pointer"><input type="checkbox" class="p-check" value="${u}" checked> ${u}</label>`).join('');
+      document.getElementById('areaExact').innerHTML = users.map(u => `<div class="input-group input-group-sm mb-1"><span class="input-group-text bg-white text-[10px] w-16 font-semibold truncate">${u}</span><input type="number" class="exact-in form-control font-bold" data-user="${u}" data-manual="false" oninput="handleExactInput(this)"></div>`).join('');
+
+      let head = `<tr><th class="sticky-col">Khoản chi</th><th>Tổng</th>${users.map(u => `<th>${u}</th>`).join('')}<th>Người trả</th><th class="no-capture"></th></tr>`;
+      document.getElementById('tableHead').innerHTML = head;
+
+      let bdy = ""; let sTot = {}; let pTot = {};
+      users.forEach(u => { sTot[u] = 0; pTot[u] = 0; });
+
+      expenses.forEach((e, i) => {
+        pTot[e.payer] += e.amount;
+        let det = JSON.parse(e.splitDetails || "{}");
+        bdy += `<tr>
+          <td class="sticky-col text-start font-medium text-stone-600">${e.desc}</td>
+          <td class="col-money">${Math.round(e.amount).toLocaleString()}</td>
+          ${users.map(u => {
+            let s = det[u]||0; sTot[u]+=s;
+            return `<td class="${s>0?'text-stone-900 font-semibold':'text-stone-300'}">${s>0?Math.round(s).toLocaleString():'-'}</td>`
+          }).join('')}
+          <td class="text-[10px] font-bold text-stone-400 uppercase">${e.payer}</td>
+          <td class="no-capture"><button onclick="deleteExpense(${i}, '${e.desc}', ${e.amount})" class="btn-delete"><i class="fa-solid fa-trash-can"></i></button></td>
+        </tr>`;
+      });
+      document.getElementById('tableBody').innerHTML = bdy;
+
+      let fTot = expenses.reduce((s,e)=>s+e.amount,0);
+      let foot = `<tr class="bg-gray-50 font-bold"><td class="sticky-col text-start text-xs">Tổng dùng</td><td class="col-money">${Math.round(fTot).toLocaleString()}</td>${users.map(u => `<td class="text-stone-900 font-bold">${Math.round(sTot[u]).toLocaleString()}</td>`).join('')}<td></td><td class="no-capture"></td></tr>
+                  <tr class="bg-gray-50 font-bold"><td class="sticky-col text-start text-xs">Đã chi</td><td>-</td>${users.map(u => `<td class="text-danger">${Math.round(pTot[u]).toLocaleString()}</td>`).join('')}<td></td><td class="no-capture"></td></tr>
+                  <tr class="row-final"><td class="sticky-col text-start text-stone-800">Quyết toán</td><td></td>${users.map(u => {
+                    let d = Math.round(sTot[u] - pTot[u]);
+                    return `<td><span class="${d>=0?'badge-dong':'badge-nhan'}">${d>0 ? 'ĐÓNG: ' : 'NHẬN: '} ${Math.abs(d).toLocaleString()}</span></td>`
+                  }).join('')}<td></td><td class="no-capture"></td></tr>`;
+      document.getElementById('tableFoot').innerHTML = foot;
+    }
+
+    async function downloadTable() {
+      showLoad(true);
+      const captureArea = document.getElementById('captureArea');
+      const tableContainer = document.getElementById('tContainer');
+      const mainTable = document.getElementById('mainTable');
+      const stickyCols = document.querySelectorAll('.sticky-col');
+      const noCaptureItems = document.querySelectorAll('.no-capture');
+
+      noCaptureItems.forEach(item => item.style.display = 'none');
+      stickyCols.forEach(col => col.classList.add('no-sticky'));
+      const oldStyle = { container: tableContainer.style.cssText, area: captureArea.style.cssText };
+
+      tableContainer.style.overflow = 'visible';
+      tableContainer.style.width = 'auto';
+      captureArea.style.width = (mainTable.offsetWidth + 100) + 'px';
+
+      try {
+        const canvas = await html2canvas(captureArea, {
+          scale: 2, useCORS: true, backgroundColor: "#ffffff",
+          windowWidth: mainTable.scrollWidth + 400
+        });
+        const link = document.createElement('a');
+        link.download = `Bill_${currentG}_${new Date().getTime()}.jpg`;
+        link.href = canvas.toDataURL("image/jpeg", 0.9);
+        link.click();
+      } catch (e) { alert("Lỗi xuất ảnh!"); }
+      finally {
+        stickyCols.forEach(col => col.classList.remove('no-sticky'));
+        noCaptureItems.forEach(item => item.style.display = '');
+        tableContainer.style.cssText = oldStyle.container;
+        captureArea.style.cssText = oldStyle.area;
+        showLoad(false);
+      }
+    }
+  </script>
+</body>
+</html>
