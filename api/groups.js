@@ -17,7 +17,9 @@ const tokenOk = (g, k) => {
   if (!g?.joinToken || typeof k !== 'string' || k.length !== g.joinToken.length) return false;
   return crypto.timingSafeEqual(Buffer.from(k), Buffer.from(g.joinToken));
 };
-const joinLinkOf = (req, g, code) => `${appUrl(req)}/?invite=${encodeURIComponent(code)}&k=${g.joinToken}`;
+// Được vào nhóm khi: có link đúng, hoặc nhóm cho vào bằng mã, hoặc email này đang được mời. Nhóm cũ (chưa có members) không cho vào.
+const canJoin = (g, k, email) => !!g?.members && (tokenOk(g, k) || groupSettings(g).joinByCode || !!g.invites?.[email]);
+const joinLinkOf =(req, g, code) => `${appUrl(req)}/?invite=${encodeURIComponent(code)}&k=${g.joinToken}`;
 const gkey = (c) => `group:${c}`;
 const ukey = (sub) => `usergroups:${sub}`;
 const ikey = (email) => `invites:${email}`;
@@ -123,11 +125,21 @@ export default async function handler(req, res) {
   const admin = isAdmin(email);
 
   try {
+    // ---------- GET ?lookup=<mã>: nhập mã ở trang chủ, nhóm đã có chưa? ----------
+    if (req.method === 'GET' && req.query?.lookup) {
+      const c = normCode(req.query.lookup);
+      if (!c) return bad(res, 'Mã nhóm gồm 2-40 ký tự: chữ, số, dấu - hoặc _');
+      const lg = await kv.get(gkey(c));
+      if (!lg || typeof lg !== 'object') return res.status(200).json({ code: c, exists: false });
+      const member = !!lg.members?.[user.sub];
+      return res.status(200).json({ code: c, exists: true, alreadyMember: member, joinable: !member && canJoin(lg, '', email) });
+    }
+
     // ---------- GET ?preview=<mã>&k=<mã bí mật>: xem trước nhóm khi vào bằng link ----------
     if (req.method === 'GET' && req.query?.preview) {
       const c = normCode(req.query.preview);
       const pg = c ? await kv.get(gkey(c)) : null;
-      if (!pg || !tokenOk(pg, String(req.query.k || ''))) return bad(res, 'Link tham gia không hợp lệ hoặc đã được đổi. Hãy xin trưởng nhóm link mới.', 404);
+      if (!pg || !canJoin(pg, String(req.query.k || ''), email)) return bad(res, 'Không vào được nhóm này. Link có thể đã đổi, hoặc nhóm không cho vào bằng mã. Hãy xin trưởng nhóm link mới.', 404);
       const prof = (await kv.get(`profile:${user.sub}`)) || {};
       const linked = activeLinked(pg);
       const reserved = new Set(Object.entries(pg.invites || {}).filter(([e]) => e !== email).map(([, v]) => v.asName).filter(Boolean));
@@ -221,7 +233,7 @@ export default async function handler(req, res) {
 
     // ---------- Vào nhóm bằng link (không cần đúng email được mời) ----------
     if (action === 'join') {
-      if (!tokenOk(g, String(body.k || ''))) return bad(res, 'Link tham gia không hợp lệ hoặc đã được đổi. Hãy xin trưởng nhóm link mới.', 403);
+      if (!canJoin(g, String(body.k || ''), email)) return bad(res, 'Không vào được nhóm này. Link có thể đã đổi, hoặc nhóm không cho vào bằng mã. Hãy xin trưởng nhóm link mới.', 403);
       if (g.members?.[user.sub]) return res.status(200).json({ success: true, code });
       const asName = String(body.asName || '').trim();
       if (asName) {
@@ -330,6 +342,7 @@ export default async function handler(req, res) {
       g.settings = { ...(g.settings || {}) };
       if (typeof body.memberCanAdd === 'boolean') g.settings.memberCanAdd = body.memberCanAdd;
       if (typeof body.memberCanEdit === 'boolean') g.settings.memberCanEdit = body.memberCanEdit;
+      if (typeof body.joinByCode === 'boolean') g.settings.joinByCode = body.joinByCode;
       await kv.set(key, g);
       return res.status(200).json({ success: true, settings: groupSettings(g) });
     }

@@ -96,3 +96,7 @@ Mọi request (trừ `/api/config`, `/api/auth`) cần header `Authorization: Be
 - `GET /api/groups` → `{ isAdmin, groups, invites, all? }` (`all` chỉ có với admin)
 - `POST /api/groups` với `action`: `create` | `accept` | `decline` | `invite` (`emails`, `asName`) | `cancelInvite` (`email`) | `settings` (`memberCanAdd`, `memberCanEdit`) | `join` (`k`, `asName`) | `joinLink` | `resetJoinLink` | `leave` | `kick` (`sub`) | `rename` (`newCode`, admin) | `delete` (trưởng nhóm hoặc admin)
 - `GET /api/data?groupId=...`, `POST /api/data` với `action`: `addUser` | `addExpense` | `deleteExpense` | `editExpense` | `removeUser` | `setPayInfo` | `linkMe` | `claim`
+
+## Vào nhóm bằng mã
+
+Ở trang chủ nhập mã nhóm: chưa có thì tạo mới; đã có thì hiện lựa chọn tham gia nhóm đó (rồi chọn tên nhập tay của mình) hoặc tạo nhóm với mã khác. Trưởng nhóm có thể tắt công tắc "Cho phép vào nhóm bằng mã" để chỉ vào bằng lời mời hoặc link. API: `GET /api/groups?lookup=<mã>`, `settings` nhận thêm `joinByCode`.

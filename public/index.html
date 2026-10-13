@@ -411,11 +411,11 @@
       <div id="myGroups"></div>
 
       <div class="card" style="margin-top:18px;">
-        <div class="card-h">Tạo nhóm mới</div>
-        <p class="card-s">Bạn sẽ là trưởng nhóm. Sau đó mời bạn bè bằng email.</p>
+        <div class="card-h">Vào nhóm hoặc tạo nhóm mới</div>
+        <p class="card-s">Nhập mã nhóm. Nhóm đã có thì bạn chọn tham gia, chưa có thì tạo mới và bạn là trưởng nhóm.</p>
         <div class="create">
-          <input type="text" id="newGroupCode" onkeyup="if(event.key === 'Enter') createGroup()" class="inp" placeholder="Mã nhóm, vd: di-da-lat" autocapitalize="none" autocomplete="off">
-          <button onclick="createGroup()" class="btn primary"><i class="fa-solid fa-plus"></i> Tạo</button>
+          <input type="text" id="newGroupCode" onkeyup="if(event.key === 'Enter') submitCode()" class="inp" placeholder="Mã nhóm, vd: di-da-lat" autocapitalize="none" autocomplete="off">
+          <button onclick="submitCode()" class="btn primary"><i class="fa-solid fa-arrow-right"></i> Tiếp tục</button>
         </div>
       </div>
 
@@ -533,6 +533,7 @@
           <p class="card-s">Trưởng nhóm luôn thêm, sửa, xóa được. Hai công tắc này áp dụng cho các thành viên còn lại.</p>
           <label class="sw"><span><b>Cho phép thêm khoản chi</b><small>Thành viên thêm khoản chi và người chia tiền</small></span><input type="checkbox" id="permAdd" onchange="savePerms()"><span class="track"></span></label>
           <label class="sw"><span><b>Cho phép sửa và xóa giao dịch</b><small>Thành viên chỉnh sửa hoặc xóa giao dịch đã có</small></span><input type="checkbox" id="permEdit" onchange="savePerms()"><span class="track"></span></label>
+          <label class="sw"><span><b>Cho phép vào nhóm bằng mã</b><small>Ai nhập đúng mã nhóm ở trang chủ đều tham gia được. Tắt thì chỉ vào bằng lời mời hoặc link</small></span><input type="checkbox" id="permCode" onchange="savePerms()"><span class="track"></span></label>
         </div>
 
         <div class="card danger-zone" id="dangerZone"></div>
@@ -628,6 +629,21 @@
   </div>
 
   <!-- Vào nhóm bằng link: chọn mình có phải người đã nhập tay không -->
+  <!-- Nhập mã nhóm đã tồn tại: tham gia hoặc tạo mã khác -->
+  <div id="codeSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="codeTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="codeTitle">Nhóm đã tồn tại</h3><button class="ibtn" onclick="closeOv('codeSheet')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <p class="sub" id="codeMsg" style="margin:8px 0 14px;"></p>
+      <button id="codeJoinBtn" class="btn primary" style="width:100%;" onclick="joinExisting()"><i class="fa-solid fa-right-to-bracket"></i> Tham gia nhóm này</button>
+      <div class="sub" style="margin:18px 0 8px;">Hoặc tạo nhóm mới với mã khác</div>
+      <div class="create">
+        <input type="text" id="altCode" onkeyup="if(event.key === 'Enter') createAlt()" class="inp" placeholder="Mã nhóm mới" autocapitalize="none" autocomplete="off">
+        <button onclick="createAlt()" class="btn soft"><i class="fa-solid fa-plus"></i> Tạo</button>
+      </div>
+    </div>
+  </div>
+
   <div id="joinSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="joinTitle">
     <div class="sheet">
       <div class="grab"></div>
@@ -751,7 +767,7 @@
     }
 
     // ---------- Lớp phủ dùng chung ----------
-    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet', 'imgSheet'];
+    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet', 'imgSheet', 'codeSheet'];
     function syncLock() { document.body.classList.toggle('lock', OVERLAYS.some((id) => $(id).classList.contains('open'))); }
     function openOv(id, blocking) {
       const el = $(id);
@@ -1115,17 +1131,51 @@
       } catch (e) { fail(e); }
     }
 
-    async function createGroup() {
-      const code = $('newGroupCode').value.trim();
-      if (!code) { toast('Hãy nhập mã nhóm, ví dụ di-da-lat', 'err'); $('newGroupCode').focus(); return; }
+    // Nhập mã ở trang chủ: chưa có thì tạo, đã có thì cho chọn tham gia hoặc tạo mã khác.
+    let codeState = null;
+
+    async function createWith(code) {
       showLoad(true);
       try {
         const r = await api('/api/groups', { method: 'POST', body: { action: 'create', code } });
         $('newGroupCode').value = '';
+        closeOv('codeSheet');
         showLoad(false);
         toast(`Đã tạo nhóm "${r.code}"`);
         await openGroup(r.code);
       } catch (e) { showLoad(false); fail(e); }
+    }
+
+    async function submitCode() {
+      const code = $('newGroupCode').value.trim();
+      if (!code) { toast('Hãy nhập mã nhóm, ví dụ di-da-lat', 'err'); $('newGroupCode').focus(); return; }
+      showLoad(true);
+      let r;
+      try { r = await api('/api/groups?lookup=' + encodeURIComponent(code)); }
+      catch (e) { showLoad(false); fail(e); return; }
+      showLoad(false);
+      if (!r.exists) { await createWith(r.code); return; }
+      if (r.alreadyMember) { toast(`Bạn đã ở trong nhóm "${r.code}"`); await openGroup(r.code); return; }
+      codeState = r;
+      $('codeTitle').textContent = `Nhóm "${r.code}" đã tồn tại`;
+      $('codeMsg').textContent = r.joinable
+        ? 'Có phải nhóm của bạn bè không? Bấm tham gia, bạn sẽ được hỏi mình có phải một tên đã nhập tay trong nhóm để nhận lại các khoản chi cũ.'
+        : 'Nhóm này không cho vào bằng mã. Hãy xin trưởng nhóm link tham gia hoặc nhờ họ mời qua email. Bạn vẫn có thể tạo nhóm mới với mã khác.';
+      $('codeJoinBtn').style.display = r.joinable ? '' : 'none';
+      $('altCode').value = '';
+      openOv('codeSheet');
+    }
+
+    async function joinExisting() {
+      if (!codeState) return;
+      closeOv('codeSheet');
+      await showJoin(codeState.code, '');
+    }
+
+    function createAlt() {
+      const code = $('altCode').value.trim();
+      if (!code) { toast('Hãy nhập một mã nhóm khác', 'err'); $('altCode').focus(); return; }
+      createWith(code);
     }
 
     async function respondInvite(i, action) {
@@ -1675,7 +1725,7 @@
     const canEdit = () => getMeta().canEdit !== false;
 
     async function savePerms() {
-      const body = { action: 'settings', code: currentG, memberCanAdd: $('permAdd').checked, memberCanEdit: $('permEdit').checked };
+      const body = { action: 'settings', code: currentG, memberCanAdd: $('permAdd').checked, memberCanEdit: $('permEdit').checked, joinByCode: $('permCode').checked };
       showLoad(true);
       try {
         const r = await api('/api/groups', { method: 'POST', body });
@@ -1688,7 +1738,8 @@
     function renderPerms() {
       const m = getMeta();
       $('permCard').style.display = m.canManage ? 'block' : 'none';
-      const st = m.settings || { memberCanAdd: true, memberCanEdit: false };
+      const st = m.settings || { memberCanAdd: true, memberCanEdit: false, joinByCode: true };
+      $('permCode').checked = st.joinByCode !== false;
       $('permAdd').checked = !!st.memberCanAdd;
       $('permEdit').checked = !!st.memberCanEdit;
       $('fab').style.display = canAdd() ? 'inline-flex' : 'none';

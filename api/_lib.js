@@ -81,6 +81,7 @@ export const canManage = (g, user) => !!(g && (isAdmin(user.email) || g.members?
 export const groupSettings = (g) => ({
   memberCanAdd: g?.settings?.memberCanAdd !== false,
   memberCanEdit: g?.settings?.memberCanEdit === true,
+  joinByCode: g?.settings?.joinByCode !== false,
 });
 export function perms(g, user) {
   const manage = canManage(g, user);
