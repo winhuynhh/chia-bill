@@ -12,6 +12,7 @@ Chia tiền nhóm, chạy trên Vercel Serverless + Redis/KV.
   - Mỗi người chỉ thấy các nhóm mình **đã tham gia** và các **lời mời đang chờ**.
 - **Admin** (`nghiahnt.dn@gmail.com`): thấy **tất cả nhóm**, mở và chỉnh sửa mọi nhóm, **đổi mã nhóm**, **xóa nhóm**.
 - **Gắn tên nhập tay với tài khoản Google**: khi mời email, trưởng nhóm chọn "Đúng, họ là <tên tạm>"; người đó đồng ý thì các khoản chi cũ tự gắn vào tài khoản của họ. Nếu không chọn, app vẫn tự khớp khi tên Google trùng tên đã nhập (không phân biệt hoa thường, dấu). Người tham gia cũng có thể tự chọn lại tên trong tab Thành viên, mục "Bạn là ai trong nhóm?", để gộp lịch sử.
+- **Quay lại sau khi rời**: cùng tài khoản hoặc cùng email thì tự nối lại đúng tên và lịch sử cũ. Nếu quay lại bằng email mới, trưởng nhóm chọn "Đúng, họ là <tên> (đã rời nhóm)" lúc mời, hoặc người đó tự chọn lại tên trong tab Thành viên để gộp.
 - **Rời nhóm**: thành viên có thể rời. Sau khi rời họ không xem được nhóm, nhưng tên, các khoản chi và tài khoản nhận tiền vẫn được giữ (hiện "đã rời") để cả nhóm quyết toán. Được mời lại sẽ nối đúng lịch sử cũ.
 - **Lọc giao dịch**: tất cả, chưa settle (sau lần settle gần nhất), 7/30 ngày, tháng này hoặc khoảng ngày tùy chọn. Bộ lọc chỉ áp dụng cho danh sách và bảng; số dư và quyết toán luôn tính toàn bộ.
 - **Settle up**: ai chuyển cho ai bao nhiêu (ít giao dịch nhất), kèm thông tin MoMo/ngân hàng của người nhận, nút "Đã trả" để ghi nhận.
