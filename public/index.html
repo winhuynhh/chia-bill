@@ -632,7 +632,7 @@
   <div id="qrSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
     <div class="sheet">
       <div class="grab"></div>
-      <div class="sheet-h"><h3 id="qrTitle">Chuyển khoản bằng QR</h3><button class="ibtn" onclick="closeOv('qrSheet')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="sheet-h"><h3 id="qrTitle">Chuyển tiền bằng QR</h3><button class="ibtn" onclick="closeOv('qrSheet')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
       <div id="qrBody" style="margin-top:8px;"></div>
     </div>
   </div>
@@ -1984,20 +1984,25 @@
       }
       return '';
     }
-    const qrUrl = (info, amount, note) => `https://img.vietqr.io/image/${bankCode(info.bankName)}-${info.bankAccount}-compact2.png?amount=${Math.round(amount)}&addInfo=${encodeURIComponent(note)}&accountName=${encodeURIComponent(info.bankHolder)}`;
+    // MoMo nhận chuyển khoản liên ngân hàng bằng SĐT (mã VietQR 971025), nên dùng chung dạng mã QR với ngân hàng.
+    const qrTarget = (info) => info.method === 'momo'
+      ? { code: '971025', acc: info.phone, holder: info.accName || '', label: 'MoMo' }
+      : { code: bankCode(info.bankName), acc: info.bankAccount, holder: info.bankHolder, label: 'ngân hàng' };
+    const qrUrl = (info, amount, note) => { const q = qrTarget(info); return `https://img.vietqr.io/image/${q.code}-${q.acc}-compact2.png?amount=${Math.round(amount)}&addInfo=${encodeURIComponent(note)}${q.holder ? '&accountName=' + encodeURIComponent(q.holder) : ''}`; };
     const transferNote = (t) => (`${ascii(t.from).replace(/[^a-z0-9 ]/g, '').trim()} tra ${currentG}`).slice(0, 50);
 
     function openQr(i) {
       const t = transfers[i];
       const info = t && payOf(t.to);
-      if (!info || info.method !== 'bank' || !bankCode(info.bankName)) return;
+      if (!info || (info.method === 'bank' && !bankCode(info.bankName))) return;
+      const q = qrTarget(info);
       const note = transferNote(t);
       $('qrBody').innerHTML = `
         <p class="sub" style="margin-bottom:10px;">${esc(t.from)} chuyển cho <b>${esc(t.to)}</b> <b class="num">${fmt(t.amount)}đ</b></p>
         <div style="text-align:center;"><img id="qrImg" src="${qrUrl(info, t.amount, note)}" alt="Mã QR chuyển khoản" style="width:100%;max-width:340px;border-radius:14px;background:#fff;border:1px solid var(--line);" onerror="this.outerHTML='<p class=&quot;hint&quot;>Không tải được mã QR. Kiểm tra mạng rồi mở lại, hoặc dùng nút sao chép bên dưới.</p>'"></div>
-        <p class="hint" style="margin:10px 0;">Số tiền, số tài khoản và nội dung đã điền sẵn. Trên điện thoại: chụp màn hình, mở app ngân hàng, chọn Quét QR rồi chọn ảnh từ thư viện. Trên máy tính: quét bằng điện thoại.</p>
+        <p class="hint" style="margin:10px 0;">Số tiền, số tài khoản và nội dung đã điền sẵn. Trên điện thoại: chụp màn hình, mở app ${q.label}, chọn Quét QR rồi chọn ảnh từ thư viện. Trên máy tính: quét bằng điện thoại.</p>
         <div class="t-act">
-          <button class="btn soft sm" onclick="copyText('${esc(info.bankAccount)}')"><i class="fa-regular fa-copy"></i> Số tài khoản</button>
+          <button class="btn soft sm" onclick="copyText('${esc(q.acc)}')"><i class="fa-regular fa-copy"></i> ${info.method === 'momo' ? 'SĐT' : 'Số tài khoản'}</button>
           <button class="btn soft sm" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>
           <button class="btn soft sm" onclick="copyText('${esc(note)}')"><i class="fa-regular fa-copy"></i> Nội dung</button>
         </div>`;
@@ -2041,7 +2046,8 @@
                   <button class="btn soft sm" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>`;
         } else {
           recvLine = `<i class="fa-solid fa-mobile-screen" style="color:var(--brand);"></i> MoMo ${info.accName ? esc(info.accName) + ', ' : ''}<b>${esc(info.phone)}</b>`;
-          btns = `<a class="btn momo sm" href="${momoLink(info.phone, t.amount)}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Mở MoMo</a>
+          btns = `<button class="btn primary sm" onclick="openQr(${i})"><i class="fa-solid fa-qrcode"></i> Mã QR</button>
+                  <a class="btn momo sm" href="${momoLink(info.phone, t.amount)}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Mở app MoMo</a>
                   <button class="btn soft sm" onclick="copyText('${esc(info.phone)}')"><i class="fa-regular fa-copy"></i> SĐT</button>
                   <button class="btn soft sm" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>`;
         }
