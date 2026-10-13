@@ -141,10 +141,12 @@ export default async function handler(req, res) {
       case 'claim': {
         const target = String(body.memberName || '');
         if (!g.users.includes(target)) return bad(res, 'Thành viên không tồn tại');
-        const holder = Object.entries(g.links).find(([sub, n]) => n === target && sub !== user.sub);
+        const holder = Object.entries(g.links).find(([sub, n]) => n === target && sub !== user.sub && g.members?.[sub]);
         if (holder) return bad(res, 'Tên này đã gắn với tài khoản khác');
         const cur = g.links[user.sub];
         const isMember = !!g.members?.[user.sub];
+        // Tên của người đã rời được nhận lại: bỏ bản ghi rời.
+        for (const [sub, x] of Object.entries(g.left || {})) if (x.name === target && sub !== user.sub) { delete g.left[sub]; if (g.links[sub] === target) delete g.links[sub]; }
         if (cur && cur !== target && isMember) mergeParticipants(g, cur, target);
         g.links[user.sub] = target;
         if (isMember) g.members[user.sub].name = target;

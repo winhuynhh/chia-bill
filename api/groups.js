@@ -36,23 +36,37 @@ async function loadMany(codes) {
 
 const normName = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
 
+// Tên đang gắn với thành viên còn trong nhóm. Tên của người đã rời được xem là "trống" để người khác nhận lại.
+const activeLinked = (g) => new Set(Object.entries(g.links || {}).filter(([sub]) => g.members?.[sub]).map(([, n]) => n));
+// Người đã rời nhưng đã có người nhận lại tên này: xóa bản ghi rời và liên kết cũ.
+function releaseName(g, name) {
+  for (const [sub, x] of Object.entries(g.left || {})) {
+    if (x.name === name) { delete g.left[sub]; if (g.links?.[sub] === name) delete g.links[sub]; }
+  }
+}
+
 // Thêm tài khoản vào nhóm: thành viên + người tham gia chia tiền + thông tin nhận tiền.
-// Nếu trưởng nhóm đã nhập tay một tên tạm cho người này (asName), hoặc tên Google trùng với một tên chưa gắn tài khoản,
-// thì dùng lại tên đó để các khoản chi cũ tự khớp.
+// Thứ tự nhận diện: (1) từng rời nhóm cùng tài khoản hoặc cùng email, (2) trưởng nhóm chỉ định tên (asName: tên nhập tay hoặc tên người đã rời),
+// (3) tên Google trùng một tên chưa có tài khoản (bỏ dấu, không phân biệt hoa thường).
 function addMember(g, user, profile, asName) {
   const pay = profilePay(profile);
   let name = String(profile?.name || user.name || user.email).trim().slice(0, 40) || user.email;
-  const linked = new Set(Object.values(g.links || {}));
+  const linked = activeLinked(g);
   const free = (n) => (g.users || []).includes(n) && !linked.has(n);
-  const prev = g.left?.[user.sub];
-  if (prev) { name = prev.name; delete g.left[user.sub]; }
-  else if (asName && free(asName)) name = asName;
+  const em = String(user.email || '').toLowerCase();
+  const prevKey = g.left?.[user.sub] ? user.sub : Object.keys(g.left || {}).find((k) => String(g.left[k].email || '').toLowerCase() === em);
+  const prev = prevKey ? g.left[prevKey] : null;
+  if (prev) {
+    name = prev.name;
+    delete g.left[prevKey];
+    if (prevKey !== user.sub) delete g.links?.[prevKey];
+  } else if (asName && free(asName)) { name = asName; releaseName(g, asName); }
   else {
     const nn = normName(name);
     const hit = (g.users || []).find((u) => free(u) && normName(u) === nn);
-    if (hit) name = hit;
+    if (hit) { name = hit; releaseName(g, hit); }
   }
-  if (!prev && (g.users || []).includes(name) && linked.has(name)) {
+  if (!prev && (g.users || []).includes(name) && activeLinked(g).has(name)) {
     name = `${name} (${user.email.split('@')[0]})`.slice(0, 40);
   }
   g.users = g.users || [];
@@ -188,7 +202,7 @@ export default async function handler(req, res) {
       if (asName) {
         if (list.length !== 1) return bad(res, 'Chỉ gắn tên tạm khi mời đúng 1 email');
         if (!(g.users || []).includes(asName)) return bad(res, 'Tên tạm không có trong nhóm');
-        if (Object.values(g.links || {}).includes(asName)) return bad(res, 'Tên này đã gắn với một tài khoản');
+        if (activeLinked(g).has(asName)) return bad(res, 'Tên này đã gắn với một tài khoản');
         const taken = Object.entries(g.invites).find(([e, v]) => v.asName === asName && e !== list[0]);
         if (taken) return bad(res, `Tên này đang gắn với lời mời gửi tới ${taken[0]}`);
       }
