@@ -103,4 +103,5 @@ Mọi request (trừ `/api/config`, `/api/auth`) cần header `Authorization: Be
 
 ## Settle up
 
-Người nhận dùng MoMo: nút "Mở MoMo" mở link nhận tiền điền sẵn SĐT và số tiền. Người nhận dùng ngân hàng: nút "Mã QR chuyển khoản" tạo mã VietQR (qua img.vietqr.io) điền sẵn ngân hàng, số tài khoản, số tiền, nội dung. Tên ngân hàng không nhận ra được thì chỉ hiện nút sao chép.
+Người nhận dùng ngân hàng: nút "Mã QR chuyển khoản" tạo mã VietQR (qua img.vietqr.io) điền sẵn ngân hàng, số tài khoản, số tiền, nội dung. Tên ngân hàng không nhận ra được thì chỉ hiện nút sao chép.
+Người nhận dùng MoMo: nút "Mở app MoMo" chỉ mở app; kèm nút sao chép SĐT, số tiền, nội dung để chuyển tay, hoặc quét QR ngân hàng. Không có QR riêng cho MoMo.
