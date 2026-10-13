@@ -10,16 +10,25 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js" crossorigin="anonymous"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lexend:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
     body, input, select, button, td, th { font-family: 'Inter', sans-serif; letter-spacing: -0.01em; }
     h1, h2, h3, h6, .btn-cam { font-family: 'Lexend', sans-serif; }
-    :root { --google-red: #EA4335; --google-red-dark: #D93025; --google-blue: #4285F4; --border-color: #DADCE0; }
+    :root { --google-red: #EA4335; --google-red-dark: #D93025; --google-blue: #4285F4; --border-color: #DADCE0; --momo: #A50064; }
     body { background-color: #F8F9FA; color: #3C4043; }
     .app-card { background: white; border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; transition: 0.3s; }
     .app-card:hover { box-shadow: 0 1px 3px rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15); }
     .btn-cam { background-color: var(--google-red); color: white; border: none; font-weight: 600; border-radius: 24px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
     .btn-cam:hover { background-color: var(--google-red-dark); transform: translateY(-1px); color: white; box-shadow: 0 1px 3px rgba(60,64,67,0.3); }
+    .btn-momo { background-color: var(--momo); color: white; border: none; font-weight: 600; border-radius: 24px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; text-decoration: none; }
+    .btn-momo:hover { background-color: #86004f; color: white; }
+    .btn-soft { background: #F1F3F4; color: #3C4043; border: none; font-weight: 600; border-radius: 24px; padding: 6px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-soft:hover { background: #E8EAED; }
+    .btn-ok { background: #E6F4EA; color: #137333; border: none; font-weight: 700; border-radius: 24px; padding: 6px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-ok:hover { background: #CEEAD6; }
+    .tab-pay { border: 1px solid var(--border-color); background: #fff; color: #5F6368; font-weight: 600; border-radius: 24px; padding: 8px 14px; font-size: 12px; flex: 1; }
+    .tab-pay.on { background: var(--momo); border-color: var(--momo); color: #fff; }
     .table-container { border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; background: white; }
     .table-matrix { font-size: 13px; width: 100%; border-collapse: separate; border-spacing: 0; min-width: 700px; }
     .table-matrix thead th { background-color: #F8F9FA; color: #5F6368; font-weight: 600; font-size: 11px; padding: 16px 10px; border-bottom: 1px solid var(--border-color); text-transform: uppercase; }
@@ -28,11 +37,14 @@
     .no-sticky { position: static !important; border-right: 1px solid #F1F3F4 !important; }
     .col-money { font-weight: 700; color: #174EA6; font-size: 14px; }
     .row-final td { border-top: 2px solid var(--border-color) !important; font-weight: 700; background-color: #F8F9FA !important; }
+    .row-sep td { background: #F8F9FA; color: #80868B; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 8px 10px; }
     .badge-nhan { background-color: #E6F4EA; color: #137333; padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 11px; white-space: nowrap; }
     .badge-dong { background-color: #FCE8E6; color: #C5221F; padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 11px; white-space: nowrap; }
+    .badge-xong { background-color: #F1F3F4; color: #5F6368; padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 11px; white-space: nowrap; }
     #loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; }
     .btn-delete { color: #5f6368; transition: 0.2s; padding: 5px 10px; border-radius: 50%; }
     .btn-delete:hover { color: var(--google-red); background: #fce8e6; }
+    #toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: #202124; color: #fff; padding: 10px 18px; border-radius: 24px; font-size: 12px; font-weight: 600; z-index: 10010; display: none; }
   </style>
 </head>
 <body class="p-3">
@@ -41,25 +53,97 @@
     <div class="spinner-border text-primary" role="status"></div>
     <p class="mt-3 font-semibold text-stone-600 uppercase text-xs">Đang đồng bộ dữ liệu...</p>
   </div>
+  <div id="toast"></div>
+
+  <!-- Đăng ký / sửa tài khoản nhận tiền -->
+  <div id="payModal" class="fixed inset-0 hidden items-center justify-center p-3" style="background: rgba(32,33,36,.6); z-index: 10002;">
+    <div class="bg-white rounded-3xl w-full shadow-2xl p-5" style="max-width: 480px; max-height: 92vh; overflow-y: auto;">
+      <div class="flex justify-between items-center mb-1">
+        <h3 id="payTitle" class="text-lg font-bold text-stone-800"></h3>
+        <button id="payClose" onclick="closePay()" class="btn-delete" title="Đóng"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <p id="payHint" class="text-[11px] text-stone-500 mb-4"></p>
+
+      <div class="flex gap-2 mb-3">
+        <button type="button" id="tabMomo" class="tab-pay" onclick="setPayMethod('momo')"><i class="fa-solid fa-mobile-screen me-1"></i> MoMo</button>
+        <button type="button" id="tabBank" class="tab-pay" onclick="setPayMethod('bank')"><i class="fa-solid fa-building-columns me-1"></i> Ngân hàng</button>
+      </div>
+
+      <div id="payMomo" class="space-y-3">
+        <input type="tel" id="payPhone" inputmode="tel" class="form-control" placeholder="SĐT MoMo (vd: 0912345678)">
+        <input type="text" id="payAccName" class="form-control" placeholder="Tên hiển thị trên MoMo (không bắt buộc)">
+      </div>
+      <div id="payBank" class="space-y-3 hidden">
+        <input type="text" id="payBankName" list="bankList" class="form-control" placeholder="Ngân hàng (vd: Vietcombank)">
+        <input type="text" id="payBankAcc" inputmode="numeric" class="form-control" placeholder="Số tài khoản">
+        <input type="text" id="payBankHolder" class="form-control" placeholder="Tên chủ tài khoản (vd: NGUYEN VAN A)">
+        <datalist id="bankList">
+          <option value="Vietcombank"><option value="VietinBank"><option value="BIDV"><option value="Agribank">
+          <option value="Techcombank"><option value="MB Bank"><option value="ACB"><option value="VPBank">
+          <option value="TPBank"><option value="Sacombank"><option value="HDBank"><option value="VIB">
+          <option value="SHB"><option value="SeABank"><option value="OCB"><option value="MSB">
+          <option value="Eximbank"><option value="LPBank"><option value="Nam A Bank"><option value="Cake">
+          <option value="Timo"><option value="Ngân hàng khác">
+        </datalist>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button id="paySave" onclick="submitPay()" class="btn btn-cam flex-1 py-2 text-sm">Lưu <i class="fa-solid fa-check ms-1"></i></button>
+        <button id="payDelete" onclick="deletePay()" class="btn-soft hidden">Xóa thông tin</button>
+        <button id="payLogout" onclick="doLogout()" class="btn-soft hidden">Đăng xuất</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settle up -->
+  <div id="settleModal" class="fixed inset-0 hidden items-center justify-center p-3" style="background: rgba(32,33,36,.55); z-index: 10000;">
+    <div class="bg-white rounded-3xl w-full shadow-2xl p-5" style="max-width: 560px; max-height: 90vh; overflow-y: auto;">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-stone-800 flex items-center gap-2"><i class="fa-solid fa-handshake" style="color: var(--momo);"></i> Settle up</h3>
+        <button onclick="closeSettle()" class="btn-delete" title="Đóng"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="settleBody"></div>
+    </div>
+  </div>
 
   <div class="max-w-7xl mx-auto">
+    <!-- Thanh tài khoản -->
+    <div id="userBar" class="items-center justify-end gap-3 mb-3" style="display:none;">
+      <img id="userAvatar" alt="" referrerpolicy="no-referrer" class="rounded-full border" style="width:28px;height:28px;object-fit:cover;">
+      <span id="userNameLbl" class="text-xs font-semibold text-stone-600"></span>
+      <button onclick="openPay('me')" class="btn btn-outline-secondary btn-sm rounded-pill border-0 font-semibold"><i class="fa-solid fa-wallet"></i> Tài khoản nhận tiền</button>
+      <button onclick="doLogout()" class="btn btn-outline-secondary btn-sm rounded-pill border-0 font-semibold"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
+    </div>
+
+    <!-- Màn 1: đăng nhập Google -->
     <div id="loginArea" class="text-center py-20">
       <div class="mb-4"><i class="fa-solid fa-file-invoice-dollar fa-4x" style="color: var(--google-blue);"></i></div>
       <h1 class="text-4xl font-extrabold text-stone-800 mb-2">Billing Master</h1>
       <p class="text-stone-500 mb-10 text-sm">Hệ thống quản lý bởi nghia.huynh • version 2026</p>
+      <div id="gBtn" class="flex justify-center"></div>
+      <p id="loginErr" class="text-danger text-sm mt-4"></p>
+    </div>
+
+    <!-- Màn 2: nhập mã nhóm -->
+    <div id="groupArea" class="text-center py-20" style="display:none;">
+      <div class="mb-4"><i class="fa-solid fa-file-invoice-dollar fa-4x" style="color: var(--google-blue);"></i></div>
+      <h1 class="text-4xl font-extrabold text-stone-800 mb-2">Billing Master</h1>
+      <p class="text-stone-500 mb-10 text-sm">Nhập mã nhóm để vào bảng chia tiền</p>
       <div class="max-w-md mx-auto p-2 bg-white rounded-full shadow-lg flex gap-2 border">
         <input type="text" id="groupId" onkeyup="if(event.key === 'Enter') loadGroup()" class="form-control border-0 focus:ring-0 font-semibold px-5 rounded-full" placeholder="Nhập mã nhóm...">
         <button onclick="loadGroup()" class="btn btn-cam px-8 py-2">Truy cập</button>
       </div>
     </div>
 
+    <!-- Màn 3: app -->
     <div id="mainApp" style="display:none;">
       <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h2 class="text-2xl font-bold text-stone-800 flex items-center gap-3">
           <i class="fa-solid fa-folder-open" style="color: #FBBC04;"></i> <span id="displayGroupId"></span>
         </h2>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap justify-center gap-2">
           <button onclick="loadGroup()" class="btn btn-light border font-semibold btn-sm rounded-pill px-4"><i class="fa-solid fa-rotate"></i> Làm mới</button>
+          <button onclick="openSettle()" class="btn btn-cam btn-sm px-4" style="background: var(--momo);"><i class="fa-solid fa-handshake"></i> SETTLE UP</button>
           <button onclick="downloadTable()" class="btn btn-dark font-semibold btn-sm rounded-pill px-4"><i class="fa-solid fa-camera me-2"></i> LƯU ẢNH (JPG)</button>
           <button onclick="exitGroup()" class="btn btn-outline-danger font-semibold btn-sm rounded-pill border-0 px-4"><i class="fa-solid fa-power-off"></i> Thoát</button>
         </div>
@@ -69,11 +153,24 @@
         <div class="col-lg-4 space-y-4">
           <div class="app-card border">
             <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Thành viên</h6>
-            <div class="flex gap-2 mb-4">
+            <div class="flex gap-2 mb-3">
               <input type="text" id="userName" onkeyup="if(event.key === 'Enter') addUser()" class="form-control" placeholder="Tên người mới...">
               <button onclick="addUser()" class="btn btn-cam px-4"><i class="fa-solid fa-plus"></i></button>
             </div>
             <div id="userTags" class="flex flex-wrap gap-2"></div>
+            <p class="text-[10px] text-stone-400 mt-3 mb-0">Bấm vào tên thành viên để nhập/sửa tài khoản nhận tiền của họ.</p>
+          </div>
+
+          <div class="app-card border">
+            <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Tôi trong nhóm này</h6>
+            <div class="space-y-3">
+              <select id="meSelect" onchange="linkMeNow()" class="form-select font-semibold text-stone-600"></select>
+              <div class="p-3 border rounded-xl bg-gray-50/50">
+                <div class="text-[10px] font-bold text-stone-400 uppercase mb-1">Tài khoản nhận tiền của tôi</div>
+                <div id="myPayText" class="text-sm font-semibold text-stone-700 break-words"></div>
+              </div>
+              <button onclick="openPay('me')" class="w-full btn-soft justify-center py-2"><i class="fa-solid fa-pen"></i> Sửa tài khoản nhận tiền</button>
+            </div>
           </div>
 
           <div class="app-card border">
@@ -122,194 +219,580 @@
 
   <script>
     let currentG = "";
-    let localData = { users: [], expenses: [] };
+    let me = null;            // { sub, email, name, picture }
+    let myProfile = {};       // { pay: {...} }
+    let token = '';
+    try { token = localStorage.getItem('bm_token') || ''; } catch (e) {}
+    let localData = { users: [], expenses: [], payInfo: {}, links: {} };
+    let transfers = [];
+    let settleOpen = false;
+    let busy = false;
+    let googleReady = false;
+    let payTarget = 'me';     // 'me' hoặc tên thành viên
+    let payMethod = 'momo';
+    let paySaving = false;
 
-    const showLoad = (v) => document.getElementById('loading').style.display = v ? 'flex' : 'none';
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const fmt = (n) => Math.round(n).toLocaleString('vi-VN');
+    const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+    const showLoad = (v) => { $('loading').style.display = v ? 'flex' : 'none'; };
+    const normData = (d) => ({ users: d?.users || [], expenses: d?.expenses || [], payInfo: d?.payInfo || {}, links: d?.links || {} });
+    const parseSplit = (e) => { try { return JSON.parse(e.splitDetails || '{}') || {}; } catch (_) { return {}; } };
+    const myMember = () => (me && localData.links) ? (localData.links[me.sub] || '') : '';
 
-    // ---- Backend helpers (Vercel /api/data thay cho google.script.run) ----
-    async function apiGetGroup(gid) {
-      const res = await fetch(`/api/data?groupId=${encodeURIComponent(gid)}`);
-      if (!res.ok) throw new Error('Không tải được dữ liệu nhóm');
-      return res.json();
+    // ---------- Thông tin nhận tiền ----------
+    function normPay(p) {
+      if (!p) return null;
+      if (p.method === 'momo' || p.method === 'bank') return p;
+      if (p.phone) return { method: 'momo', phone: p.phone, accName: p.accName || '' };
+      return null;
+    }
+    const profilePay = (pr) => pr ? (normPay(pr.pay) || (pr.momoPhone ? { method: 'momo', phone: pr.momoPhone, accName: pr.momoName || '' } : null)) : null;
+    const payOf = (name) => normPay(localData.payInfo[name]);
+    function payText(p) {
+      if (!p) return '';
+      if (p.method === 'bank') return `${p.bankName} • ${p.bankAccount} • ${p.bankHolder}`;
+      return `MoMo ${p.phone}${p.accName ? ' (' + p.accName + ')' : ''}`;
     }
 
-    async function apiPost(payload) {
-      const res = await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error('Lỗi khi lưu dữ liệu');
-      return res.json();
+    // Link nhận tiền MoMo theo SĐT + số tiền. Nếu MoMo đổi định dạng, chỉ cần sửa hàm này.
+    const momoLink = (phone, amount) => `https://nhantien.momo.vn/${phone}/${Math.round(amount)}`;
+
+    function toast(msg) {
+      const t = $('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => { t.style.display = 'none'; }, 1800);
     }
 
-    function loadGroup() {
-      const gid = document.getElementById('groupId').value.trim().toLowerCase();
+    async function copyText(text) {
+      try { await navigator.clipboard.writeText(String(text)); toast('Đã sao chép'); }
+      catch (_) { prompt('Sao chép thủ công:', String(text)); }
+    }
+
+    // ---------- API ----------
+    async function api(path, { method = 'GET', body } = {}) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = 'Bearer ' + token;
+      const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+      const json = await res.json().catch(() => ({}));
+      if (res.status === 401 && path !== '/api/auth') {
+        doLogout();
+        throw new Error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại');
+      }
+      if (!res.ok) throw new Error(json.error || 'Lỗi máy chủ');
+      return json;
+    }
+
+    // ---------- Màn hình ----------
+    function showScreen(name) {
+      $('loginArea').style.display = name === 'login' ? 'block' : 'none';
+      $('groupArea').style.display = name === 'group' ? 'block' : 'none';
+      $('mainApp').style.display = name === 'app' ? 'block' : 'none';
+      $('userBar').style.display = (name !== 'login' && me) ? 'flex' : 'none';
+    }
+
+    function setSession(user, profile) {
+      myProfile = profile || {};
+      me = { sub: user.sub, email: user.email, name: user.name || user.email, picture: myProfile.picture || '' };
+      $('userNameLbl').textContent = me.name;
+      const av = $('userAvatar');
+      av.style.display = me.picture ? 'block' : 'none';
+      if (me.picture) av.src = me.picture;
+    }
+
+    // Sau khi đăng nhập: nếu chưa có tài khoản nhận tiền thì bắt buộc đăng ký.
+    function enterGroupScreen() {
+      showScreen('group');
+      if (!profilePay(myProfile)) openPay('me', true);
+    }
+
+    // ---------- Đăng nhập Google ----------
+    async function initGoogle() {
+      if (googleReady) return;
+      try {
+        const cfg = await (await fetch('/api/config')).json();
+        if (!cfg.googleClientId) { $('loginErr').textContent = 'Chưa cấu hình GOOGLE_CLIENT_ID trên Vercel.'; return; }
+        if (typeof google === 'undefined' || !google.accounts) { $('loginErr').textContent = 'Không tải được Google Sign-In. Kiểm tra mạng rồi tải lại trang.'; return; }
+        google.accounts.id.initialize({ client_id: cfg.googleClientId, callback: onGoogleCredential });
+        google.accounts.id.renderButton($('gBtn'), { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with', locale: 'vi', width: 280 });
+        googleReady = true;
+      } catch (e) {
+        $('loginErr').textContent = 'Không khởi tạo được đăng nhập Google.';
+      }
+    }
+
+    async function onGoogleCredential(resp) {
+      showLoad(true);
+      $('loginErr').textContent = '';
+      try {
+        const r = await api('/api/auth', { method: 'POST', body: { credential: resp.credential } });
+        token = r.token;
+        try { localStorage.setItem('bm_token', token); } catch (_) {}
+        setSession(r.user, r.profile);
+        enterGroupScreen();
+      } catch (e) {
+        $('loginErr').textContent = e.message;
+      } finally { showLoad(false); }
+    }
+
+    function doLogout() {
+      token = ''; me = null; myProfile = {}; currentG = '';
+      try { localStorage.removeItem('bm_token'); } catch (_) {}
+      try { google.accounts.id.disableAutoSelect(); } catch (_) {}
+      closeSettle();
+      closePay(true);
+      showScreen('login');
+      initGoogle();
+    }
+
+    async function boot() {
+      if (token) {
+        try {
+          const r = await api('/api/profile');
+          setSession(r.user, r.profile);
+          enterGroupScreen();
+          return;
+        } catch (_) { /* rơi xuống màn đăng nhập */ }
+      }
+      showScreen('login');
+      initGoogle();
+    }
+    window.addEventListener('load', boot);
+
+    // ---------- Form tài khoản nhận tiền ----------
+    function setPayMethod(m) {
+      payMethod = m;
+      $('tabMomo').classList.toggle('on', m === 'momo');
+      $('tabBank').classList.toggle('on', m === 'bank');
+      $('payMomo').classList.toggle('hidden', m !== 'momo');
+      $('payBank').classList.toggle('hidden', m !== 'bank');
+    }
+
+    function openPay(target, blocking = false) {
+      payTarget = target;
+      const isMe = target === 'me';
+      const cur = isMe ? profilePay(myProfile) : payOf(target);
+
+      $('payTitle').textContent = blocking ? 'Đăng ký tài khoản nhận tiền'
+        : (isMe ? 'Tài khoản nhận tiền của tôi' : `Tài khoản nhận tiền của ${target}`);
+      $('payHint').textContent = blocking
+        ? 'Chào mừng! Hãy đăng ký 1 tài khoản MoMo hoặc ngân hàng để khi Settle up, người khác biết chuyển tiền cho bạn ở đâu.'
+        : (isMe ? 'Thông tin này hiện cho cả nhóm khi Settle up.' : 'Dùng khi người này chưa đăng nhập hoặc chưa tự đăng ký.');
+
+      $('payClose').style.display = blocking ? 'none' : '';
+      $('payLogout').classList.toggle('hidden', !blocking);
+      $('payDelete').classList.toggle('hidden', isMe || !cur);
+
+      $('payPhone').value = cur && cur.method === 'momo' ? cur.phone : '';
+      $('payAccName').value = cur && cur.method === 'momo' ? (cur.accName || '') : '';
+      $('payBankName').value = cur && cur.method === 'bank' ? cur.bankName : '';
+      $('payBankAcc').value = cur && cur.method === 'bank' ? cur.bankAccount : '';
+      $('payBankHolder').value = cur && cur.method === 'bank' ? cur.bankHolder : '';
+      setPayMethod(cur ? cur.method : 'momo');
+
+      const m = $('payModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+
+    function closePay() {
+      const m = $('payModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    function readPayForm() {
+      return payMethod === 'momo'
+        ? { method: 'momo', phone: $('payPhone').value, accName: $('payAccName').value }
+        : { method: 'bank', bankName: $('payBankName').value, bankAccount: $('payBankAcc').value, bankHolder: $('payBankHolder').value };
+    }
+
+    async function submitPay() {
+      if (paySaving) return;
+      const pay = readPayForm();
+      if (payTarget === 'me') {
+        paySaving = true;
+        try {
+          const r = await api('/api/profile', { method: 'POST', body: { pay } });
+          myProfile = { ...myProfile, ...r.profile };
+          closePay();
+          renderMyPay();
+          // Nếu đang ở trong nhóm và đã chọn mình là ai thì đồng bộ sang nhóm.
+          if (currentG && myMember()) await mutate({ action: 'linkMe', memberName: myMember() });
+          toast('Đã lưu tài khoản nhận tiền');
+        } catch (e) { alert(e.message); }
+        finally { paySaving = false; }
+      } else {
+        if (await mutate({ action: 'setPayInfo', memberName: payTarget, pay })) { closePay(); toast('Đã lưu'); }
+      }
+    }
+
+    async function deletePay() {
+      if (payTarget === 'me') return;
+      if (!confirm(`Xóa thông tin nhận tiền của "${payTarget}"?`)) return;
+      if (await mutate({ action: 'setPayInfo', memberName: payTarget, pay: null })) closePay();
+    }
+
+    function editPay(i) {
+      const u = localData.users[i];
+      if (u !== undefined) openPay(u);
+    }
+
+    function renderMyPay() {
+      $('myPayText').textContent = payText(profilePay(myProfile)) || 'Chưa đăng ký';
+    }
+
+    // ---------- Nhóm ----------
+    async function loadGroup() {
+      const gid = (currentG || $('groupId').value).trim().toLowerCase();
       if (!gid) return alert("Vui lòng nhập mã nhóm!");
 
       showLoad(true);
-      apiGetGroup(gid)
-        .then(data => {
-          showLoad(false);
-          if (data.users.length === 0 && data.expenses.length === 0) {
-            if (confirm(`Nhóm "${gid}" chưa có dữ liệu. Bạn có muốn tạo mới nhóm này không?`)) {
-              currentG = gid;
-              localData = { users: [], expenses: [] };
-              render();
-              openApp();
-            }
-          } else {
-            currentG = gid;
-            localData = data;
-            render();
-            openApp();
-          }
-        })
-        .catch(err => {
-          showLoad(false);
-          alert(err.message);
-        });
+      try {
+        const data = normData(await api('/api/data?groupId=' + encodeURIComponent(gid)));
+        showLoad(false);
+        if (data.users.length === 0 && data.expenses.length === 0 && currentG !== gid) {
+          if (!confirm(`Nhóm "${gid}" chưa có dữ liệu. Bạn có muốn tạo mới nhóm này không?`)) return;
+        }
+        currentG = gid;
+        localData = data;
+        openApp();
+        render();
+      } catch (e) {
+        showLoad(false);
+        alert(e.message);
+      }
     }
 
     function openApp() {
-      document.getElementById('loginArea').style.display = 'none';
-      document.getElementById('mainApp').style.display = 'block';
-      document.getElementById('displayGroupId').innerText = currentG.toUpperCase();
+      showScreen('app');
+      $('displayGroupId').innerText = currentG.toUpperCase();
     }
 
     function exitGroup() {
-      document.getElementById('mainApp').style.display = 'none';
-      document.getElementById('loginArea').style.display = 'block';
-      document.getElementById('groupId').value = "";
+      currentG = '';
+      closeSettle();
+      showScreen('group');
+      $('groupId').value = "";
     }
 
-    function addUser() {
-      const n = document.getElementById('userName').value.trim();
-      if(!n || localData.users.includes(n)) return;
-      localData.users.push(n);
-      render();
-      apiPost({ action: 'addUser', groupId: currentG, userName: n }).catch(err => alert(err.message));
-      document.getElementById('userName').value = "";
+    // Gọi API ghi dữ liệu nhóm; server trả về toàn bộ dữ liệu mới nhất.
+    async function mutate(body) {
+      if (busy) return false;
+      busy = true;
+      try {
+        const r = await api('/api/data', { method: 'POST', body: { groupId: currentG, ...body } });
+        localData = normData(r.data);
+        render();
+        return true;
+      } catch (e) {
+        alert(e.message);
+        return false;
+      } finally { busy = false; }
     }
 
+    async function addUser() {
+      const n = $('userName').value.trim();
+      if (!n || localData.users.includes(n)) return;
+      if (await mutate({ action: 'addUser', userName: n })) $('userName').value = "";
+    }
+
+    function linkMeNow() {
+      mutate({ action: 'linkMe', memberName: $('meSelect').value });
+    }
+
+    // ---------- Hóa đơn ----------
     function toggleSplit() {
       const m = document.querySelector('input[name="splitMode"]:checked').value;
-      document.getElementById('areaEqual').classList.toggle('hidden', m !== "EQUAL");
-      document.getElementById('areaExact').classList.toggle('hidden', m === "EQUAL");
-
+      $('areaEqual').classList.toggle('hidden', m !== "EQUAL");
+      $('areaExact').classList.toggle('hidden', m === "EQUAL");
       if (m === "EXACT") recalcExact();
     }
 
-    function addExpense() {
-      const d = document.getElementById('expDesc').value.trim();
-      const a = parseFloat(document.getElementById('expAmount').value);
-      const p = document.getElementById('expPayer').value;
-      if(!d || !a || !p) return alert("Thiếu thông tin hóa đơn!");
+    async function addExpense() {
+      const d = $('expDesc').value.trim();
+      const a = parseFloat($('expAmount').value);
+      const p = $('expPayer').value;
+      if (!d || !a || !p) return alert("Thiếu thông tin hóa đơn!");
 
       let owes = {};
       const m = document.querySelector('input[name="splitMode"]:checked').value;
-      if(m === "EQUAL") {
+      if (m === "EQUAL") {
         const sel = Array.from(document.querySelectorAll('.p-check:checked')).map(c => c.value);
-        if(sel.length === 0) return alert("Chưa chọn người chịu tiền!");
+        if (sel.length === 0) return alert("Chưa chọn người chịu tiền!");
         sel.forEach(u => owes[u] = a / sel.length);
       } else {
-        document.querySelectorAll('.exact-in').forEach(i => { if(i.value > 0) owes[i.dataset.user] = parseFloat(i.value); });
+        document.querySelectorAll('.exact-in').forEach(i => { if (i.value > 0) owes[i.dataset.user] = parseFloat(i.value); });
+        const sum = Object.values(owes).reduce((s, v) => s + v, 0);
+        if (sum === 0) return alert("Chưa nhập số tiền cho ai!");
+        if (Math.abs(sum - a) > 1 && !confirm(`Tổng chia (${fmt(sum)}) khác số tiền hóa đơn (${fmt(a)}). Vẫn lưu?`)) return;
       }
 
-      const newExp = {desc: d, amount: a, payer: p, splitDetails: JSON.stringify(owes)};
-      localData.expenses.push(newExp);
-      render();
-      apiPost({ action: 'addExpense', groupId: currentG, ...newExp }).catch(err => alert(err.message));
-
-      document.getElementById('expDesc').value = "";
-      document.getElementById('expAmount').value = "";
+      const ok = await mutate({ action: 'addExpense', id: uid(), desc: d, amount: a, payer: p, splitDetails: JSON.stringify(owes) });
+      if (ok) { $('expDesc').value = ""; $('expAmount').value = ""; }
     }
 
     function handleExactInput(el) {
-      if (el.value !== "") {
-        el.dataset.manual = "true";
-      } else {
-        el.dataset.manual = "false";
-      }
+      el.dataset.manual = el.value !== "" ? "true" : "false";
       recalcExact();
     }
 
     function recalcExact() {
-      const totalAmount = parseFloat(document.getElementById('expAmount').value) || 0;
+      const totalAmount = parseFloat($('expAmount').value) || 0;
       const inputs = Array.from(document.querySelectorAll('.exact-in'));
-
       let manualSum = 0;
       let autoInputs = [];
-
       inputs.forEach(inp => {
-        if (inp.dataset.manual === "true") {
-          manualSum += parseFloat(inp.value) || 0;
-        } else {
-          autoInputs.push(inp);
-        }
+        if (inp.dataset.manual === "true") manualSum += parseFloat(inp.value) || 0;
+        else autoInputs.push(inp);
       });
-
       if (autoInputs.length > 0) {
-        let remaining = totalAmount - manualSum;
-        let splitValue = remaining / autoInputs.length;
-
-        autoInputs.forEach(inp => {
-          inp.value = splitValue > 0 ? Math.round(splitValue) : 0;
-        });
+        const splitValue = (totalAmount - manualSum) / autoInputs.length;
+        autoInputs.forEach(inp => { inp.value = splitValue > 0 ? Math.round(splitValue) : 0; });
       }
     }
 
-    function deleteExpense(idx, desc, amount) {
-      if(!confirm(`Xóa khoản chi: "${desc}"?`)) return;
-      localData.expenses.splice(idx, 1);
-      render();
-      apiPost({ action: 'deleteExpense', groupId: currentG, desc, amount }).catch(err => alert(err.message));
+    function deleteExpense(id) {
+      const e = localData.expenses.find(x => x.id === id);
+      if (!e) return;
+      if (!confirm(`Xóa khoản: "${e.desc}"?`)) return;
+      mutate({ action: 'deleteExpense', id });
     }
 
-    function render() {
-      const {users, expenses} = localData;
-      document.getElementById('userTags').innerHTML = users.map(u => `<span class="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full text-[11px] font-semibold border">${u}</span>`).join('');
-      document.getElementById('expPayer').innerHTML = '<option value="">-- Ai trả? --</option>' + users.map(u => `<option value="${u}">${u}</option>`).join('');
-      document.getElementById('areaEqual').innerHTML = users.map(u => `<label class="flex items-center gap-2 border p-2 rounded-lg bg-white text-[11px] font-semibold cursor-pointer"><input type="checkbox" class="p-check" value="${u}" checked> ${u}</label>`).join('');
-      document.getElementById('areaExact').innerHTML = users.map(u => `<div class="input-group input-group-sm mb-1"><span class="input-group-text bg-white text-[10px] w-16 font-semibold truncate">${u}</span><input type="number" class="exact-in form-control font-bold" data-user="${u}" data-manual="false" oninput="handleExactInput(this)"></div>`).join('');
-
-      let head = `<tr><th class="sticky-col">Khoản chi</th><th>Tổng</th>${users.map(u => `<th>${u}</th>`).join('')}<th>Người trả</th><th class="no-capture"></th></tr>`;
-      document.getElementById('tableHead').innerHTML = head;
-
-      let bdy = ""; let sTot = {}; let pTot = {};
-      users.forEach(u => { sTot[u] = 0; pTot[u] = 0; });
-
-      expenses.forEach((e, i) => {
-        pTot[e.payer] += e.amount;
-        let det = JSON.parse(e.splitDetails || "{}");
-        bdy += `<tr>
-          <td class="sticky-col text-start font-medium text-stone-600">${e.desc}</td>
-          <td class="col-money">${Math.round(e.amount).toLocaleString()}</td>
-          ${users.map(u => {
-            let s = det[u]||0; sTot[u]+=s;
-            return `<td class="${s>0?'text-stone-900 font-semibold':'text-stone-300'}">${s>0?Math.round(s).toLocaleString():'-'}</td>`
-          }).join('')}
-          <td class="text-[10px] font-bold text-stone-400 uppercase">${e.payer}</td>
-          <td class="no-capture"><button onclick="deleteExpense(${i}, '${e.desc}', ${e.amount})" class="btn-delete"><i class="fa-solid fa-trash-can"></i></button></td>
-        </tr>`;
+    // ---------- Tính toán ----------
+    // d > 0: còn phải đóng, d < 0: sẽ được nhận. Settle đã ghi nhận được cộng/trừ vào đây.
+    function computeBalances() {
+      const { users, expenses } = localData;
+      const s = {}, p = {}, sent = {}, recv = {}, d = {};
+      users.forEach(u => { s[u] = 0; p[u] = 0; sent[u] = 0; recv[u] = 0; });
+      expenses.forEach(e => {
+        const det = parseSplit(e);
+        if (e.settle) {
+          if (e.payer in sent) sent[e.payer] += e.amount;
+          for (const u in det) if (u in recv) recv[u] += Number(det[u]) || 0;
+        } else {
+          if (e.payer in p) p[e.payer] += e.amount;
+          for (const u in det) if (u in s) s[u] += Number(det[u]) || 0;
+        }
       });
-      document.getElementById('tableBody').innerHTML = bdy;
-
-      let fTot = expenses.reduce((s,e)=>s+e.amount,0);
-      let foot = `<tr class="bg-gray-50 font-bold"><td class="sticky-col text-start text-xs">Tổng dùng</td><td class="col-money">${Math.round(fTot).toLocaleString()}</td>${users.map(u => `<td class="text-stone-900 font-bold">${Math.round(sTot[u]).toLocaleString()}</td>`).join('')}<td></td><td class="no-capture"></td></tr>
-                  <tr class="bg-gray-50 font-bold"><td class="sticky-col text-start text-xs">Đã chi</td><td>-</td>${users.map(u => `<td class="text-danger">${Math.round(pTot[u]).toLocaleString()}</td>`).join('')}<td></td><td class="no-capture"></td></tr>
-                  <tr class="row-final"><td class="sticky-col text-start text-stone-800">Quyết toán</td><td></td>${users.map(u => {
-                    let d = Math.round(sTot[u] - pTot[u]);
-                    return `<td><span class="${d>=0?'badge-dong':'badge-nhan'}">${d>0 ? 'ĐÓNG: ' : 'NHẬN: '} ${Math.abs(d).toLocaleString()}</span></td>`
-                  }).join('')}<td></td><td class="no-capture"></td></tr>`;
-      document.getElementById('tableFoot').innerHTML = foot;
+      users.forEach(u => { d[u] = s[u] - p[u] - sent[u] + recv[u]; });
+      return { s, p, sent, recv, d };
     }
 
+    // Ghép người nợ nhiều nhất với người được nhận nhiều nhất => ít giao dịch nhất.
+    function computeTransfers() {
+      const { d } = computeBalances();
+      const debtors = [], creditors = [];
+      for (const u in d) {
+        const v = Math.round(d[u]);
+        if (v > 0) debtors.push({ u, v }); else if (v < 0) creditors.push({ u, v: -v });
+      }
+      debtors.sort((a, b) => b.v - a.v);
+      creditors.sort((a, b) => b.v - a.v);
+      const out = [];
+      let i = 0, j = 0;
+      while (i < debtors.length && j < creditors.length) {
+        const x = Math.min(debtors[i].v, creditors[j].v);
+        if (x > 0) out.push({ from: debtors[i].u, to: creditors[j].u, amount: x });
+        debtors[i].v -= x; creditors[j].v -= x;
+        if (debtors[i].v === 0) i++;
+        if (creditors[j].v === 0) j++;
+      }
+      return out;
+    }
+
+    // ---------- Render bảng ----------
+    function render() {
+      const { users, expenses } = localData;
+      const keepPayer = $('expPayer').value;
+      const mine = myMember();
+      renderMyPay();
+
+      $('userTags').innerHTML = users.map((u, i) => {
+        const p = payOf(u);
+        const icon = !p ? '<i class="fa-solid fa-pen text-stone-300"></i>'
+          : (p.method === 'bank' ? '<i class="fa-solid fa-building-columns" style="color:#174EA6;"></i>' : '<i class="fa-solid fa-mobile-screen" style="color: var(--momo);"></i>');
+        return `<button type="button" onclick="editPay(${i})" title="Bấm để nhập tài khoản nhận tiền" class="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full text-[11px] font-semibold border inline-flex items-center gap-1.5">${esc(u)}${u === mine ? ' (bạn)' : ''} ${icon}</button>`;
+      }).join('');
+
+      $('expPayer').innerHTML = '<option value="">-- Ai trả? --</option>' + users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
+      if (users.includes(keepPayer)) $('expPayer').value = keepPayer;
+
+      if (document.activeElement !== $('meSelect')) {
+        $('meSelect').innerHTML = '<option value="">-- Tôi là thành viên nào? --</option>' + users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
+        $('meSelect').value = mine;
+      }
+
+      $('areaEqual').innerHTML = users.map(u => `<label class="flex items-center gap-2 border p-2 rounded-lg bg-white text-[11px] font-semibold cursor-pointer"><input type="checkbox" class="p-check" value="${esc(u)}" checked> ${esc(u)}</label>`).join('');
+      $('areaExact').innerHTML = users.map(u => `<div class="input-group input-group-sm mb-1"><span class="input-group-text bg-white text-[10px] w-16 font-semibold truncate">${esc(u)}</span><input type="number" class="exact-in form-control font-bold" data-user="${esc(u)}" data-manual="false" oninput="handleExactInput(this)"></div>`).join('');
+
+      const colSpan = users.length + 4;
+      $('tableHead').innerHTML = `<tr><th class="sticky-col">Khoản chi</th><th>Tổng</th>${users.map(u => `<th>${esc(u)}</th>`).join('')}<th>Người trả</th><th class="no-capture"></th></tr>`;
+
+      const bills = expenses.filter(e => !e.settle);
+      const settles = expenses.filter(e => e.settle);
+      const delBtn = (e) => `<td class="no-capture"><button onclick="deleteExpense('${esc(e.id)}')" class="btn-delete"><i class="fa-solid fa-trash-can"></i></button></td>`;
+
+      let bdy = bills.map(e => {
+        const det = parseSplit(e);
+        return `<tr>
+          <td class="sticky-col text-start font-medium text-stone-600">${esc(e.desc)}</td>
+          <td class="col-money">${fmt(e.amount)}</td>
+          ${users.map(u => { const s = Number(det[u]) || 0; return `<td class="${s > 0 ? 'text-stone-900 font-semibold' : 'text-stone-300'}">${s > 0 ? fmt(s) : '-'}</td>`; }).join('')}
+          <td class="text-[10px] font-bold text-stone-400 uppercase">${esc(e.payer)}</td>
+          ${delBtn(e)}
+        </tr>`;
+      }).join('');
+
+      if (settles.length) {
+        bdy += `<tr class="row-sep"><td colspan="${colSpan}" class="text-start">Đã settle</td></tr>`;
+        bdy += settles.map(e => {
+          const det = parseSplit(e);
+          return `<tr>
+            <td class="sticky-col text-start font-medium text-stone-600"><i class="fa-solid fa-handshake me-1" style="color: var(--momo);"></i>${esc(e.desc)}</td>
+            <td class="col-money">${fmt(e.amount)}</td>
+            ${users.map(u => {
+              if (u === e.payer) return `<td class="text-[11px] font-semibold" style="color:#137333;">Trả ${fmt(e.amount)}</td>`;
+              if (det[u]) return `<td class="text-[11px] font-semibold" style="color:#137333;">Nhận ${fmt(det[u])}</td>`;
+              return `<td class="text-stone-300">-</td>`;
+            }).join('')}
+            <td class="text-[10px] font-bold text-stone-400 uppercase">${esc(e.payer)}</td>
+            ${delBtn(e)}
+          </tr>`;
+        }).join('');
+      }
+      $('tableBody').innerHTML = bdy;
+
+      const { s, p, sent, recv, d } = computeBalances();
+      const fTot = bills.reduce((a, e) => a + e.amount, 0);
+      let foot = `<tr class="bg-gray-50 font-bold"><td class="sticky-col text-start text-xs">Tổng dùng</td><td class="col-money">${fmt(fTot)}</td>${users.map(u => `<td class="text-stone-900 font-bold">${fmt(s[u])}</td>`).join('')}<td></td><td class="no-capture"></td></tr>
+        <tr class="bg-gray-50 font-bold"><td class="sticky-col text-start text-xs">Đã chi</td><td>-</td>${users.map(u => `<td class="text-danger">${fmt(p[u])}</td>`).join('')}<td></td><td class="no-capture"></td></tr>`;
+      if (settles.length) {
+        foot += `<tr class="bg-gray-50 font-bold"><td class="sticky-col text-start text-xs">Đã settle</td><td>-</td>${users.map(u => {
+          const net = Math.round(sent[u] - recv[u]);
+          if (net > 0) return `<td class="text-[11px]" style="color:#137333;">Đã trả ${fmt(net)}</td>`;
+          if (net < 0) return `<td class="text-[11px]" style="color:#137333;">Đã nhận ${fmt(-net)}</td>`;
+          return `<td class="text-stone-300">-</td>`;
+        }).join('')}<td></td><td class="no-capture"></td></tr>`;
+      }
+      foot += `<tr class="row-final"><td class="sticky-col text-start text-stone-800">Quyết toán</td><td></td>${users.map(u => {
+          const v = Math.round(d[u]);
+          if (v > 0) return `<td><span class="badge-dong">ĐÓNG: ${fmt(v)}</span></td>`;
+          if (v < 0) return `<td><span class="badge-nhan">NHẬN: ${fmt(-v)}</span></td>`;
+          return `<td><span class="badge-xong">XONG</span></td>`;
+        }).join('')}<td></td><td class="no-capture"></td></tr>
+        <tr class="bg-gray-50"><td class="sticky-col text-start text-xs">Nhận tiền</td><td></td>${users.map(u => {
+          const pi = payOf(u);
+          if (!pi) return `<td class="text-stone-300 text-[11px]">-</td>`;
+          return pi.method === 'bank'
+            ? `<td class="text-[10px] text-stone-500 leading-tight">${esc(pi.bankName)}<br><b>${esc(pi.bankAccount)}</b></td>`
+            : `<td class="text-[10px] text-stone-500 leading-tight">MoMo<br><b>${esc(pi.phone)}</b></td>`;
+        }).join('')}<td></td><td class="no-capture"></td></tr>`;
+      $('tableFoot').innerHTML = foot;
+
+      if (settleOpen) { transfers = sortedTransfers(); renderSettle(); }
+    }
+
+    // ---------- Settle up ----------
+    function sortedTransfers() {
+      const mine = myMember();
+      const score = (t) => (t.from === mine ? 2 : 0) + (t.to === mine ? 1 : 0);
+      return computeTransfers().sort((a, b) => score(b) - score(a));
+    }
+
+    function openSettle() {
+      settleOpen = true;
+      transfers = sortedTransfers();
+      renderSettle();
+      const m = $('settleModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+
+    function closeSettle() {
+      settleOpen = false;
+      const m = $('settleModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    function renderSettle() {
+      const body = $('settleBody');
+      const mine = myMember();
+
+      if (transfers.length === 0) {
+        body.innerHTML = `<div class="text-center py-8">
+          <i class="fa-solid fa-circle-check fa-3x mb-3" style="color:#137333;"></i>
+          <p class="font-semibold text-stone-700 mb-1">${localData.expenses.length ? 'Mọi người đã cân bằng, không còn ai nợ ai.' : 'Chưa có khoản chi nào.'}</p>
+        </div>`;
+        return;
+      }
+
+      const cards = transfers.map((t, i) => {
+        const info = payOf(t.to);
+        const tag = t.from === mine ? '<span class="badge-dong ms-2">Bạn trả</span>' : (t.to === mine ? '<span class="badge-nhan ms-2">Bạn nhận</span>' : '');
+        let recvLine, btns = '';
+        if (!info) {
+          recvLine = `Chưa có tài khoản nhận tiền của ${esc(t.to)}.`;
+          btns = `<button class="btn-soft" onclick="openPay(localData.users[${localData.users.indexOf(t.to)}])"><i class="fa-solid fa-plus"></i> Nhập thông tin của ${esc(t.to)}</button>`;
+        } else if (info.method === 'bank') {
+          recvLine = `<i class="fa-solid fa-building-columns me-1" style="color:#174EA6;"></i>${esc(info.bankName)} • STK <b>${esc(info.bankAccount)}</b> • ${esc(info.bankHolder)}`;
+          btns = `<button class="btn-soft" onclick="copyText('${esc(info.bankAccount)}')"><i class="fa-regular fa-copy"></i> Số tài khoản</button>
+                  <button class="btn-soft" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>`;
+        } else {
+          recvLine = `<i class="fa-solid fa-mobile-screen me-1" style="color: var(--momo);"></i>MoMo ${info.accName ? esc(info.accName) + ' • ' : ''}<b>${esc(info.phone)}</b>`;
+          btns = `<a class="btn-momo" href="${momoLink(info.phone, t.amount)}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Mở link MoMo</a>
+                  <button class="btn-soft" onclick="copyText('${esc(info.phone)}')"><i class="fa-regular fa-copy"></i> SĐT</button>
+                  <button class="btn-soft" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>`;
+        }
+        return `<div class="border rounded-2xl p-3 mb-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="text-sm"><b>${esc(t.from)}</b> <i class="fa-solid fa-arrow-right mx-1 text-stone-400"></i> <b>${esc(t.to)}</b>${tag}</div>
+            <div class="col-money">${fmt(t.amount)} đ</div>
+          </div>
+          <div class="text-[12px] text-stone-600 mt-2">${recvLine}</div>
+          <div class="flex flex-wrap gap-2 mt-2">
+            ${btns}
+            <button class="btn-ok" onclick="markPaid(${i})"><i class="fa-solid fa-check"></i> Đã trả</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      body.innerHTML = `<p class="text-[11px] text-stone-500 mb-3">${transfers.length} giao dịch là đủ để cả nhóm hết nợ. Chuyển xong thì bấm <b>Đã trả</b> để ghi nhận vào bảng.</p>
+        ${cards}
+        <button class="btn-soft w-full justify-center" onclick="copySummary()"><i class="fa-regular fa-copy"></i> Sao chép tóm tắt để gửi nhóm</button>`;
+    }
+
+    async function markPaid(i) {
+      const t = transfers[i];
+      if (!t) return;
+      if (!confirm(`Xác nhận ${t.from} đã chuyển ${fmt(t.amount)}đ cho ${t.to}?`)) return;
+      await mutate({
+        action: 'addExpense', id: uid(),
+        desc: `Settle: ${t.from} → ${t.to}`,
+        amount: t.amount, payer: t.from,
+        splitDetails: JSON.stringify({ [t.to]: t.amount }),
+        settle: true
+      });
+    }
+
+    function copySummary() {
+      const lines = transfers.map(t => {
+        const txt = payText(payOf(t.to));
+        return `${t.from} → ${t.to}: ${fmt(t.amount)}đ${txt ? ` (${txt})` : ''}`;
+      });
+      copyText(`Settle up nhóm ${currentG.toUpperCase()}:\n` + lines.join('\n'));
+    }
+
+    // ---------- Xuất ảnh ----------
     async function downloadTable() {
       showLoad(true);
-      const captureArea = document.getElementById('captureArea');
-      const tableContainer = document.getElementById('tContainer');
-      const mainTable = document.getElementById('mainTable');
+      const captureArea = $('captureArea');
+      const tableContainer = $('tContainer');
+      const mainTable = $('mainTable');
       const stickyCols = document.querySelectorAll('.sticky-col');
       const noCaptureItems = document.querySelectorAll('.no-capture');
 
