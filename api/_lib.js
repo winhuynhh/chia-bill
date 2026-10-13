@@ -157,8 +157,8 @@ export function sanitizePay(raw) {
     const bankHolder = clip(raw.bankHolder, 60).toUpperCase();
     if (!bankName) return { error: 'Chưa nhập tên ngân hàng' };
     if (!/^\d{4,24}$/.test(bankAccount)) return { error: 'Số tài khoản không hợp lệ (chỉ gồm 4-24 chữ số)' };
-    if (!bankHolder) return { error: 'Chưa nhập tên chủ tài khoản' };
-    return { value: { method: 'bank', bankName, bankAccount, bankHolder } };
+    const bankCode = /^[A-Za-z0-9]{2,12}$/.test(String(raw.bankCode || '')) ? String(raw.bankCode) : '';
+    return { value: { method: 'bank', bankName, ...(bankCode ? { bankCode } : {}), bankAccount, bankHolder } };
   }
 
   return { error: 'Hãy chọn MoMo hoặc Ngân hàng' };
