@@ -149,6 +149,13 @@
     .gcard > i { color: var(--faint); }
     .create { display: flex; gap: 8px; }
     .create .inp { flex: 1; min-width: 0; }
+    .sug { position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; z-index: 5; max-height: 240px; overflow-y: auto; background: var(--card, #fff); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.14); }
+    .sug.hidden { display: none; }
+    .sug button { display: block; width: 100%; text-align: left; padding: 10px 12px; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; border-bottom: 1px solid var(--line); }
+    .sug button:last-child { border-bottom: 0; }
+    .sug button:hover, .sug button:focus { background: var(--brand-t); outline: none; }
+    .sug small { display: block; color: var(--mute); font-size: 12px; margin-top: 1px; }
+    .sug .none { padding: 12px; color: var(--mute); font-size: 14px; }
     .sk { background: linear-gradient(90deg, #ECE8F3 25%, #F5F2FA 50%, #ECE8F3 75%); background-size: 200% 100%; animation: sk 1.2s infinite linear; border-radius: var(--r-lg); height: 74px; margin-bottom: 10px; }
     @keyframes sk { to { background-position: -200% 0; } }
     details.adm { background: #fff; border-radius: var(--r-lg); box-shadow: var(--shadow); margin-top: 26px; }
@@ -598,17 +605,13 @@
         <label class="field"><span>Tên hiển thị trên MoMo (không bắt buộc)</span><input type="text" id="payAccName" class="inp" placeholder="vd: Nguyễn Văn A"></label>
       </div>
       <div id="payBank" class="stack hidden">
-        <label class="field"><span>Ngân hàng</span><input type="text" id="payBankName" list="bankList" class="inp" placeholder="vd: Vietcombank"></label>
+        <div class="field" style="position:relative;"><span>Ngân hàng</span>
+          <input type="text" id="payBankName" class="inp" autocomplete="off" autocapitalize="none" placeholder="Gõ để tìm, vd: vietcom, mb, techcom" oninput="bankSearch(true)" onfocus="bankSearch()" onblur="setTimeout(hideBankSug,150)">
+          <div id="bankSug" class="sug hidden" role="listbox"></div>
+          <small id="bankPicked" class="hint" style="display:block;margin-top:6px;"></small>
+        </div>
         <label class="field"><span>Số tài khoản</span><input type="text" id="payBankAcc" inputmode="numeric" class="inp" placeholder="Chỉ nhập số"></label>
-        <label class="field"><span>Tên chủ tài khoản</span><input type="text" id="payBankHolder" class="inp" placeholder="NGUYEN VAN A"></label>
-        <datalist id="bankList">
-          <option value="Vietcombank"><option value="VietinBank"><option value="BIDV"><option value="Agribank">
-          <option value="Techcombank"><option value="MB Bank"><option value="ACB"><option value="VPBank">
-          <option value="TPBank"><option value="Sacombank"><option value="HDBank"><option value="VIB">
-          <option value="SHB"><option value="SeABank"><option value="OCB"><option value="MSB">
-          <option value="Eximbank"><option value="LPBank"><option value="Nam A Bank"><option value="Cake">
-          <option value="Timo"><option value="Ngân hàng khác">
-        </datalist>
+        <label class="field"><span>Tên chủ tài khoản (không bắt buộc)</span><input type="text" id="payBankHolder" class="inp" placeholder="NGUYEN VAN A"></label>
       </div>
 
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;">
@@ -753,7 +756,7 @@
     const payOf = (name) => normPay(localData.payInfo[name]);
     function payText(p) {
       if (!p) return '';
-      if (p.method === 'bank') return `${p.bankName} • ${p.bankAccount} • ${p.bankHolder}`;
+      if (p.method === 'bank') return [p.bankName, p.bankAccount, p.bankHolder].filter(Boolean).join(' • ');
       return `MoMo ${p.phone}${p.accName ? ' (' + p.accName + ')' : ''}`;
     }
 
@@ -968,9 +971,9 @@
 
       $('payPhone').value = cur && cur.method === 'momo' ? cur.phone : '';
       $('payAccName').value = cur && cur.method === 'momo' ? (cur.accName || '') : '';
-      $('payBankName').value = cur && cur.method === 'bank' ? cur.bankName : '';
+      setBankForm(cur);
       $('payBankAcc').value = cur && cur.method === 'bank' ? cur.bankAccount : '';
-      $('payBankHolder').value = cur && cur.method === 'bank' ? cur.bankHolder : '';
+      $('payBankHolder').value = cur && cur.method === 'bank' ? (cur.bankHolder || '') : '';
       setPayMethod(cur ? cur.method : 'momo');
       openOv('payModal', blocking);
     }
@@ -980,11 +983,12 @@
     function readPayForm() {
       return payMethod === 'momo'
         ? { method: 'momo', phone: $('payPhone').value, accName: $('payAccName').value }
-        : { method: 'bank', bankName: $('payBankName').value, bankAccount: $('payBankAcc').value, bankHolder: $('payBankHolder').value };
+        : { method: 'bank', bankName: bankSel ? bankSel.name : $('payBankName').value, bankCode: bankSel ? bankSel.code : '', bankAccount: $('payBankAcc').value, bankHolder: $('payBankHolder').value };
     }
 
     async function submitPay() {
       if (paySaving) return;
+      if (payMethod === 'bank' && !bankSel) { toast('Hãy chọn ngân hàng từ danh sách gợi ý', 'err'); $('payBankName').focus(); bankSearch(); return; }
       const pay = readPayForm();
       if (payTarget === 'me') {
         paySaving = true;
@@ -1965,32 +1969,73 @@
     }
 
     // ---------- QR chuyển khoản ngân hàng (VietQR) ----------
-    // Tên ngân hàng người dùng gõ tự do -> mã ngân hàng của VietQR. Không nhận ra thì chỉ hiện nút sao chép.
-    const BANKS = {
-      ICB: 'vietinbank viettinbank ctg', VCB: 'vietcombank vcb', BIDV: 'bidv', VBA: 'agribank vba', OCB: 'ocb', MB: 'mb mbbank mbbankquandoi quandoi',
-      TCB: 'techcombank tcb', ACB: 'acb', VPB: 'vpbank vpb', TPB: 'tpbank tpb', STB: 'sacombank stb', HDB: 'hdbank hdb', VCCB: 'vietcapitalbank banviet bvbank',
-      SCB: 'scb', VIB: 'vib', SHB: 'shb', EIB: 'eximbank exim eib', MSB: 'msb maritimebank', CAKE: 'cake', Ubank: 'ubank', TIMO: 'timo', SGICB: 'saigonbank',
-      BAB: 'bacabank bab', PVCB: 'pvcombank pvcb', NCB: 'ncb', ABB: 'abbank abb', VAB: 'vietabank vab', NAB: 'namabank nab', PGB: 'pgbank pgb',
-      VIETBANK: 'vietbank', BVB: 'baovietbank bvb', SEAB: 'seabank seab', LPB: 'lpbank lpb lienvietpostbank lienviet', KLB: 'kienlongbank klb', CIMB: 'cimb',
-      VTLMONEY: 'viettelmoney', VNPTMONEY: 'vnptmoney', SHBVN: 'shinhanbank shinhan', HSBC: 'hsbc', UOB: 'uob', WVN: 'woori'
-    };
+    // Danh sách ngân hàng theo mã VietQR. Người dùng chọn từ gợi ý, không gõ tay tên ngân hàng.
+    const BANK_LIST = [
+      ['VCB', 'Vietcombank', 'Ngoại Thương Việt Nam'], ['ICB', 'VietinBank', 'Công Thương Việt Nam'], ['BIDV', 'BIDV', 'Đầu tư và Phát triển Việt Nam'],
+      ['VBA', 'Agribank', 'Nông nghiệp và Phát triển Nông thôn'], ['TCB', 'Techcombank', 'Kỹ Thương Việt Nam'], ['MB', 'MB Bank', 'Quân đội'],
+      ['ACB', 'ACB', 'Á Châu'], ['VPB', 'VPBank', 'Việt Nam Thịnh Vượng'], ['TPB', 'TPBank', 'Tiên Phong'], ['STB', 'Sacombank', 'Sài Gòn Thương Tín'],
+      ['HDB', 'HDBank', 'Phát triển TP.HCM'], ['VIB', 'VIB', 'Quốc tế Việt Nam'], ['SHB', 'SHB', 'Sài Gòn - Hà Nội'], ['EIB', 'Eximbank', 'Xuất Nhập khẩu Việt Nam'],
+      ['MSB', 'MSB', 'Hàng Hải Việt Nam'], ['OCB', 'OCB', 'Phương Đông'], ['LPB', 'LPBank', 'Lộc Phát Việt Nam (LienVietPostBank)'], ['SEAB', 'SeABank', 'Đông Nam Á'],
+      ['NAB', 'Nam A Bank', 'Nam Á'], ['SCB', 'SCB', 'Sài Gòn'], ['ABB', 'ABBank', 'An Bình'], ['BAB', 'Bac A Bank', 'Bắc Á'], ['VCCB', 'Bản Việt (BVBank)', 'Bản Việt'],
+      ['VAB', 'VietABank', 'Việt Á'], ['VIETBANK', 'VietBank', 'Việt Nam Thương Tín'], ['PVCB', 'PVcomBank', 'Đại Chúng Việt Nam'], ['NCB', 'NCB', 'Quốc Dân'],
+      ['BVB', 'BaoViet Bank', 'Bảo Việt'], ['KLB', 'KienlongBank', 'Kiên Long'], ['PGB', 'PGBank', 'Thịnh vượng và Phát triển'], ['SGICB', 'Saigonbank', 'Sài Gòn Công Thương'],
+      ['CBB', 'CBBank', 'Xây dựng Việt Nam'], ['GPB', 'GPBank', 'Dầu Khí Toàn Cầu'], ['COOPBANK', 'Co-opBank', 'Hợp tác xã Việt Nam'], ['VRB', 'VRB', 'Liên doanh Việt - Nga'],
+      ['CAKE', 'CAKE by VPBank', 'Ngân hàng số CAKE'], ['Ubank', 'Ubank by VPBank', 'Ngân hàng số Ubank'], ['TIMO', 'Timo', 'Ngân hàng số Timo by Bản Việt'], ['Vikki', 'Vikki Bank', 'Ngân hàng số Vikki'],
+      ['SHBVN', 'Shinhan Bank', 'Shinhan Việt Nam'], ['WVN', 'Woori Bank', 'Woori Việt Nam'], ['HSBC', 'HSBC', 'HSBC Việt Nam'], ['CIMB', 'CIMB', 'CIMB Việt Nam'],
+      ['UOB', 'UOB', 'United Overseas Bank'], ['SCVN', 'Standard Chartered', 'Standard Chartered Việt Nam'], ['PBVN', 'Public Bank', 'Public Việt Nam'], ['HLBVN', 'Hong Leong', 'Hong Leong Việt Nam'],
+      ['IVB', 'Indovina Bank', 'Indovina'], ['MBV', 'MBV', 'Việt Nam Hiện Đại'], ['KBank', 'KBank', 'Kasikornbank']
+    ].map(([code, name, full]) => ({ code, name, full }));
+    // Tên cũ người dùng từng gõ tay (dữ liệu trước đây) -> mã, để vẫn nhận ra.
+    const BANK_ALIAS = { ICB: 'viettinbank ctg', VCB: 'vcb', MB: 'mbbank quandoi', EIB: 'exim', LPB: 'lienvietpostbank lienviet lpb', VCCB: 'banviet bvbank vietcapitalbank', BAB: 'bacabank' };
     const ascii = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
     const flat = (t) => ascii(t).replace(/[^a-z0-9]/g, '');
+    const bankByCode = (c) => BANK_LIST.find((b) => b.code === c) || null;
     function bankCode(name) {
       const full = flat(name);
       for (const n of [full, full.replace(/^nganhang/, '')]) {
         if (!n) continue;
-        for (const [code, al] of Object.entries(BANKS)) if (al.split(' ').includes(n)) return code;
+        for (const b of BANK_LIST) if (flat(b.name) === n || flat(b.code) === n) return b.code;
+        for (const [code, al] of Object.entries(BANK_ALIAS)) if (al.split(' ').includes(n)) return code;
       }
       return '';
     }
-    const qrUrl = (info, amount, note) => `https://img.vietqr.io/image/${bankCode(info.bankName)}-${info.bankAccount}-compact2.png?amount=${Math.round(amount)}&addInfo=${encodeURIComponent(note)}&accountName=${encodeURIComponent(info.bankHolder)}`;
+    const bankOf = (info) => (info && bankByCode(info.bankCode) ? info.bankCode : bankCode(info && info.bankName));
+
+    // Ô chọn ngân hàng: gõ để lọc, bấm để chọn.
+    let bankSel = null;
+    function bankSearch(typed) {
+      const inp = $('payBankName');
+      if (typed) { bankSel = null; $('bankPicked').textContent = ''; }
+      const q = flat(inp.value);
+      const hits = BANK_LIST.filter((b) => !q || flat(b.name + b.code + b.full).includes(q)).slice(0, 12);
+      const box = $('bankSug');
+      box.innerHTML = hits.length
+        ? hits.map((b) => `<button type="button" role="option" onpointerdown="event.preventDefault();pickBank('${b.code}')">${esc(b.name)}<small>${esc(b.full)}</small></button>`).join('')
+        : '<div class="none">Không thấy ngân hàng này. Thử gõ tên ngắn hơn, vd: vietcom.</div>';
+      box.classList.remove('hidden');
+    }
+    function hideBankSug() { $('bankSug').classList.add('hidden'); }
+    function pickBank(code) {
+      const b = bankByCode(code);
+      if (!b) return;
+      bankSel = b;
+      $('payBankName').value = b.name;
+      $('bankPicked').textContent = 'Ngân hàng ' + b.full;
+      hideBankSug();
+    }
+    function setBankForm(cur) {
+      bankSel = null;
+      $('bankPicked').textContent = '';
+      $('payBankName').value = cur && cur.method === 'bank' ? cur.bankName : '';
+      if (cur && cur.method === 'bank') { const c = bankOf(cur); if (c) pickBank(c); }
+    }
+    const qrUrl = (info, amount, note) => `https://img.vietqr.io/image/${bankOf(info)}-${info.bankAccount}-compact2.png?amount=${Math.round(amount)}&addInfo=${encodeURIComponent(note)}${info.bankHolder ? '&accountName=' + encodeURIComponent(info.bankHolder) : ''}`;
     const transferNote = (t) => (`${ascii(t.from).replace(/[^a-z0-9 ]/g, '').trim()} tra ${currentG}`).slice(0, 50);
 
     function openQr(i) {
       const t = transfers[i];
       const info = t && payOf(t.to);
-      if (!info || info.method !== 'bank' || !bankCode(info.bankName)) return;
+      if (!info || info.method !== 'bank' || !bankOf(info)) return;
       const note = transferNote(t);
       $('qrBody').innerHTML = `
         <p class="sub" style="margin-bottom:10px;">${esc(t.from)} chuyển cho <b>${esc(t.to)}</b> <b class="num">${fmt(t.amount)}đ</b></p>
@@ -2035,8 +2080,8 @@
           recvLine = `Chưa có tài khoản nhận tiền của ${esc(t.to)}.`;
           btns = `<button class="btn soft sm" onclick="openPay(localData.users[${localData.users.indexOf(t.to)}])"><i class="fa-solid fa-plus"></i> Nhập thông tin của ${esc(t.to)}</button>`;
         } else if (info.method === 'bank') {
-          recvLine = `<i class="fa-solid fa-building-columns" style="color:var(--info);"></i> ${esc(info.bankName)}, STK <b>${esc(info.bankAccount)}</b>, ${esc(info.bankHolder)}`;
-          btns = `${bankCode(info.bankName) ? `<button class="btn primary sm" onclick="openQr(${i})"><i class="fa-solid fa-qrcode"></i> Mã QR chuyển khoản</button>` : ''}
+          recvLine = `<i class="fa-solid fa-building-columns" style="color:var(--info);"></i> ${esc(info.bankName)}, STK <b>${esc(info.bankAccount)}</b>${info.bankHolder ? ', ' + esc(info.bankHolder) : ''}`;
+          btns = `${bankOf(info) ? `<button class="btn primary sm" onclick="openQr(${i})"><i class="fa-solid fa-qrcode"></i> Mã QR chuyển khoản</button>` : ''}
                   <button class="btn soft sm" onclick="copyText('${esc(info.bankAccount)}')"><i class="fa-regular fa-copy"></i> Số tài khoản</button>
                   <button class="btn soft sm" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>`;
         } else {
