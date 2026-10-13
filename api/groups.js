@@ -1,0 +1,233 @@
+import { kv } from '@vercel/kv';
+import {
+  requireUser, isAdmin, canManage, normCode, isEmail, cs, unCs, appUrl, profilePay,
+} from './_lib.js';
+import { sendInviteMail, mailConfigured, inviteText } from './_mail.js';
+
+// Keys:
+//   group:<code>        dữ liệu nhóm (members, invites, users, expenses, payInfo, links)
+//   groups:index        set mọi mã nhóm (chỉ admin dùng để liệt kê)
+//   usergroups:<sub>    set mã nhóm mà tài khoản đã tham gia
+//   invites:<email>     set mã nhóm đang mời email này (chờ đồng ý)
+//   profile:<sub>       hồ sơ + tài khoản nhận tiền
+
+const gkey = (c) => `group:${c}`;
+const ukey = (sub) => `usergroups:${sub}`;
+const ikey = (email) => `invites:${email}`;
+const INDEX = 'groups:index';
+
+const bad = (res, msg, status = 400) => res.status(status).json({ error: msg });
+
+const summary = (g, user) => ({
+  code: g.code,
+  role: g.members?.[user.sub]?.role || (isAdmin(user.email) ? 'admin' : 'member'),
+  ownerEmail: g.ownerEmail || '',
+  memberCount: Object.keys(g.members || {}).length,
+  billCount: (g.expenses || []).filter((e) => !e.settle).length,
+});
+
+async function loadMany(codes) {
+  if (!codes.length) return [];
+  const gs = await kv.mget(...codes.map(gkey));
+  return codes.map((c, i) => ({ code: c, g: gs[i] }));
+}
+
+// Thêm tài khoản vào nhóm: thành viên + người tham gia chia tiền (tên Google) + thông tin nhận tiền.
+function addMember(g, user, profile) {
+  const pay = profilePay(profile);
+  let name = String(profile?.name || user.name || user.email).trim().slice(0, 40) || user.email;
+  const linked = new Set(Object.values(g.links || {}));
+  if ((g.users || []).includes(name) && linked.has(name)) {
+    name = `${name} (${user.email.split('@')[0]})`.slice(0, 40);
+  }
+  g.users = g.users || [];
+  g.links = g.links || {};
+  g.payInfo = g.payInfo || {};
+  if (!g.users.includes(name)) g.users.push(name);
+  g.links[user.sub] = name;
+  if (pay) g.payInfo[name] = pay;
+  g.members = g.members || {};
+  g.members[user.sub] = { email: user.email, name, role: g.members[user.sub]?.role || 'member', joinedAt: Date.now() };
+}
+
+export default async function handler(req, res) {
+  const user = requireUser(req, res);
+  if (!user) return;
+  const email = String(user.email || '').toLowerCase();
+  const admin = isAdmin(email);
+
+  try {
+    // ---------- GET: danh sách nhóm + lời mời (+ tất cả nhóm nếu là admin) ----------
+    if (req.method === 'GET') {
+      const myCodes = (await kv.smembers(ukey(user.sub))).map(unCs);
+      const groups = [];
+      const staleGroups = [];
+      for (const { code, g } of await loadMany(myCodes)) {
+        if (g && g.members?.[user.sub]) groups.push(summary(g, user));
+        else staleGroups.push(cs(code));
+      }
+      if (staleGroups.length) await kv.srem(ukey(user.sub), ...staleGroups);
+
+      const inviteCodes = (await kv.smembers(ikey(email))).map(unCs);
+      const invites = [];
+      const staleInvites = [];
+      for (const { code, g } of await loadMany(inviteCodes)) {
+        const inv = g?.invites?.[email];
+        if (inv) invites.push({ code, invitedBy: inv.byName || inv.byEmail, invitedByEmail: inv.byEmail, at: inv.at });
+        else staleInvites.push(cs(code));
+      }
+      if (staleInvites.length) await kv.srem(ikey(email), ...staleInvites);
+
+      const out = { isAdmin: admin, mailConfigured: mailConfigured(), groups, invites };
+      if (admin) {
+        const all = (await kv.smembers(INDEX)).map(unCs);
+        out.all = (await loadMany(all)).filter((x) => x.g).map((x) => summary(x.g, user)).sort((a, b) => a.code.localeCompare(b.code));
+      }
+      return res.status(200).json(out);
+    }
+
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', ['GET', 'POST']);
+      return bad(res, 'Method not allowed', 405);
+    }
+
+    const body = req.body || {};
+    const action = body.action;
+    const profile = (await kv.get(`profile:${user.sub}`)) || {};
+
+    // ---------- Tạo nhóm: người tạo tự là trưởng nhóm + thành viên ----------
+    if (action === 'create') {
+      const code = normCode(body.code);
+      if (!code) return bad(res, 'Mã nhóm gồm 2-40 ký tự: chữ, số, dấu - hoặc _');
+      const pay = profilePay(profile);
+      if (!pay) return bad(res, 'Hãy đăng ký tài khoản nhận tiền trước khi tạo nhóm');
+      const name = String(profile.name || user.name || user.email).trim().slice(0, 40);
+      const g = {
+        code,
+        ownerSub: user.sub,
+        ownerEmail: user.email,
+        createdAt: Date.now(),
+        members: { [user.sub]: { email: user.email, name, role: 'owner', joinedAt: Date.now() } },
+        invites: {},
+        users: [name],
+        expenses: [],
+        payInfo: { [name]: pay },
+        links: { [user.sub]: name },
+      };
+      const ok = await kv.set(gkey(code), g, { nx: true });
+      if (!ok) return bad(res, 'Mã nhóm đã tồn tại, hãy chọn mã khác', 409);
+      await kv.sadd(INDEX, cs(code));
+      await kv.sadd(ukey(user.sub), cs(code));
+      return res.status(200).json({ success: true, code });
+    }
+
+    const code = normCode(body.code);
+    if (!code) return bad(res, 'Thiếu hoặc sai mã nhóm');
+    const key = gkey(code);
+    const g = await kv.get(key);
+    if (!g) return bad(res, 'Nhóm không tồn tại', 404);
+
+    // ---------- Đồng ý / từ chối lời mời ----------
+    if (action === 'accept' || action === 'decline') {
+      if (!g.invites?.[email]) return bad(res, 'Không tìm thấy lời mời cho email của bạn', 404);
+      if (action === 'accept') {
+        addMember(g, user, profile);
+        await kv.sadd(ukey(user.sub), cs(code));
+      }
+      delete g.invites[email];
+      await kv.set(key, g);
+      await kv.srem(ikey(email), cs(code));
+      return res.status(200).json({ success: true, code });
+    }
+
+    // ---------- Mời thành viên qua email (trưởng nhóm / admin) ----------
+    if (action === 'invite') {
+      if (!canManage(g, user)) return bad(res, 'Chỉ trưởng nhóm mới mời được thành viên', 403);
+      const raw = Array.isArray(body.emails) ? body.emails.join(',') : String(body.emails || '');
+      const list = [...new Set(raw.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean))];
+      if (!list.length) return bad(res, 'Chưa nhập email nào');
+      if (list.length > 10) return bad(res, 'Mỗi lần mời tối đa 10 email');
+
+      g.invites = g.invites || {};
+      const memberEmails = new Set(Object.values(g.members || {}).map((m) => String(m.email).toLowerCase()));
+      const inviterName = String(profile.name || user.name || user.email);
+      const link = `${appUrl(req)}/?invite=${encodeURIComponent(code)}`;
+      const results = [];
+      const toSend = [];
+
+      for (const to of list) {
+        if (!isEmail(to)) { results.push({ email: to, status: 'invalid' }); continue; }
+        if (to === email) { results.push({ email: to, status: 'self' }); continue; }
+        if (memberEmails.has(to)) { results.push({ email: to, status: 'already_member' }); continue; }
+        if (!g.invites[to] && Object.keys(g.invites).length >= 50) { results.push({ email: to, status: 'limit' }); continue; }
+        const again = !!g.invites[to];
+        g.invites[to] = { byEmail: user.email, byName: inviterName, at: Date.now() };
+        results.push({ email: to, status: again ? 'resent' : 'invited' });
+        toSend.push(to);
+      }
+
+      await kv.set(key, g);
+      for (const to of toSend) await kv.sadd(ikey(to), cs(code));
+
+      const sent = await Promise.all(
+        toSend.map((to) => sendInviteMail({ to, code, link, inviterName, inviterEmail: user.email }))
+      );
+      toSend.forEach((to, i) => {
+        const r = results.find((x) => x.email === to);
+        r.emailSent = sent[i].sent;
+        if (!sent[i].sent) r.error = sent[i].reason;
+      });
+
+      return res.status(200).json({
+        success: true, code, link, results,
+        mailConfigured: mailConfigured(),
+        shareText: inviteText({ code, link, inviterName, inviterEmail: user.email, to: 'đã được mời' }),
+      });
+    }
+
+    if (action === 'cancelInvite') {
+      if (!canManage(g, user)) return bad(res, 'Chỉ trưởng nhóm mới huỷ được lời mời', 403);
+      const to = String(body.email || '').toLowerCase();
+      if (g.invites?.[to]) {
+        delete g.invites[to];
+        await kv.set(key, g);
+      }
+      await kv.srem(ikey(to), cs(code));
+      return res.status(200).json({ success: true });
+    }
+
+    // ---------- Chỉ admin: đổi mã / xóa nhóm ----------
+    if (action === 'rename' || action === 'delete') {
+      if (!admin) return bad(res, 'Chỉ admin mới được thực hiện thao tác này', 403);
+
+      const memberSubs = Object.keys(g.members || {});
+      const inviteEmails = Object.keys(g.invites || {});
+
+      if (action === 'delete') {
+        await kv.del(key);
+        await kv.srem(INDEX, cs(code));
+        for (const sub of memberSubs) await kv.srem(ukey(sub), cs(code));
+        for (const e of inviteEmails) await kv.srem(ikey(e), cs(code));
+        return res.status(200).json({ success: true });
+      }
+
+      const newCode = normCode(body.newCode);
+      if (!newCode) return bad(res, 'Mã nhóm mới gồm 2-40 ký tự: chữ, số, dấu - hoặc _');
+      if (newCode === code) return res.status(200).json({ success: true, code });
+      const moved = { ...g, code: newCode };
+      const ok = await kv.set(gkey(newCode), moved, { nx: true });
+      if (!ok) return bad(res, 'Mã nhóm mới đã tồn tại', 409);
+      await kv.del(key);
+      await kv.srem(INDEX, cs(code));
+      await kv.sadd(INDEX, cs(newCode));
+      for (const sub of memberSubs) { await kv.srem(ukey(sub), cs(code)); await kv.sadd(ukey(sub), cs(newCode)); }
+      for (const e of inviteEmails) { await kv.srem(ikey(e), cs(code)); await kv.sadd(ikey(e), cs(newCode)); }
+      return res.status(200).json({ success: true, code: newCode });
+    }
+
+    return bad(res, 'Action không hợp lệ');
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+}

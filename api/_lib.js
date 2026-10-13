@@ -9,6 +9,7 @@ function hmac(body) {
   return crypto.createHmac('sha256', process.env.SESSION_SECRET).update(body).digest('base64url');
 }
 
+// ---------- Session ----------
 // Session token tự ký (HMAC-SHA256), không cần thư viện ngoài.
 export function signSession(payload, ttlSec = 60 * 60 * 24 * 30) {
   if (!process.env.SESSION_SECRET) throw new Error('Thiếu biến môi trường SESSION_SECRET');
@@ -43,6 +44,64 @@ export function requireUser(req, res) {
   return user;
 }
 
+// ---------- Admin ----------
+// Mặc định admin là nghiahnt.dn@gmail.com. Có thể đổi bằng biến môi trường ADMIN_EMAILS (cách nhau bằng dấu phẩy).
+export function adminEmails() {
+  return (process.env.ADMIN_EMAILS || 'nghiahnt.dn@gmail.com')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+export const isAdmin = (email) => adminEmails().includes(String(email || '').toLowerCase());
+
+// ---------- Mã nhóm / email ----------
+// Mã nhóm: chữ (có dấu), số, "-" hoặc "_", 2-40 ký tự. Khoảng trắng đổi thành "-".
+export function normCode(raw) {
+  const c = String(raw || '').trim().toLowerCase().replace(/\s+/g, '-');
+  return /^[\p{L}\p{N}_-]{2,40}$/u.test(c) ? c : null;
+}
+export const isEmail = (e) => e.length <= 120 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+// Redis tự parse chuỗi giống số/JSON (vd "1e3" -> 1000) nên thêm tiền tố khi lưu mã nhóm vào set.
+export const cs = (code) => 'c:' + code;
+export const unCs = (s) => String(s).slice(2);
+
+export function appUrl(req) {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '');
+  const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0];
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  return `${proto}://${host}`;
+}
+
+// ---------- Quyền truy cập nhóm ----------
+export const canAccess = (g, user) => !!(g && (isAdmin(user.email) || g.members?.[user.sub]));
+export const canManage = (g, user) => !!(g && (isAdmin(user.email) || g.members?.[user.sub]?.role === 'owner'));
+
+// Dữ liệu trả cho giao diện (không lộ sub/invite của người khác khi không cần).
+export function groupView(g, user) {
+  const admin = isAdmin(user.email);
+  const myRole = g.members?.[user.sub]?.role || (admin ? 'admin' : null);
+  const manage = canManage(g, user);
+  return {
+    users: g.users || [],
+    expenses: g.expenses || [],
+    payInfo: g.payInfo || {},
+    links: g.links || {},
+    meta: {
+      code: g.code,
+      role: myRole,
+      canManage: manage,
+      isAdmin: admin,
+      ownerEmail: g.ownerEmail || '',
+      members: Object.entries(g.members || {}).map(([sub, m]) => ({ sub, email: m.email, name: m.name, role: m.role })),
+      invites: manage
+        ? Object.entries(g.invites || {}).map(([email, i]) => ({ email, at: i.at, byEmail: i.byEmail }))
+        : [],
+    },
+  };
+}
+
+// ---------- Thông tin nhận tiền ----------
 // SĐT Việt Nam 10 số bắt đầu bằng 0. Chấp nhận +84 / 84. Trả null nếu sai.
 export function normalizePhone(raw) {
   let p = String(raw || '').replace(/[\s.\-()]/g, '');
