@@ -960,13 +960,13 @@
           <i class="fa-solid fa-chevron-right"></i></button>`).join('')
         : `<div class="empty card"><b>Chưa có nhóm nào</b>Tạo nhóm đầu tiên bên dưới, hoặc nhờ trưởng nhóm mời bạn qua email.</div>`;
 
-      $('adminBox').innerHTML = (h.isAdmin && h.all) ? `<details class="adm">
+      $('adminBox').innerHTML = (h.isAdmin && h.all) ? `<details class="adm" open>
         <summary><i class="fa-solid fa-user-shield"></i> Quản trị: tất cả nhóm (${h.all.length}) <i class="fa-solid fa-chevron-down" style="margin-left:auto;font-size:12px;"></i></summary>
         <div class="tw">${h.all.length ? `<table class="atable">
           <thead><tr><th>Mã nhóm</th><th>Trưởng nhóm</th><th>TV</th><th>Khoản chi</th><th></th></tr></thead>
           <tbody>${h.all.map((g, i) => `<tr>
             <td><b>${esc(g.code)}</b></td>
-            <td class="hint">${esc(g.ownerEmail)}</td>
+            <td class="hint">${g.legacy ? 'Nhóm cũ, chưa có thành viên' : esc(g.ownerEmail)}</td>
             <td>${g.memberCount}</td><td>${g.billCount}</td>
             <td><div class="acts">
               <button class="btn soft sm" onclick="openGroupAdmin(${i})">Mở</button>
