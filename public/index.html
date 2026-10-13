@@ -1270,7 +1270,8 @@
       $('memberList').innerHTML = meta.members.length ? meta.members.map(m => `<div class="mem">
           ${av(m.name)}
           <div class="mid"><b>${esc(m.name)}${me && m.sub === me.sub ? ' (bạn)' : ''}</b><small>${esc(m.email)}</small></div>
-          ${m.role === 'owner' ? '<span class="badge nhan">Trưởng nhóm</span>' : ''}</div>`).join('')
+          ${m.role === 'owner' ? '<span class="badge nhan">Trưởng nhóm</span>' : ''}
+          ${(meta.canManage && m.role !== 'owner' && !(me && m.sub === me.sub)) ? `<button class="ibtn del" title="Xóa khỏi nhóm" aria-label="Xóa ${esc(m.name)} khỏi nhóm" onclick="kickMember('${esc(m.sub)}')"><i class="fa-solid fa-user-minus"></i></button>` : ''}</div>`).join('')
         : '<p class="hint">Chưa có tài khoản nào.</p>';
 
       $('inviteForm').style.display = meta.canManage ? 'block' : 'none';
@@ -1599,6 +1600,23 @@
     // Người này có dính giao dịch nào không (trả tiền hoặc được chia tiền).
     function isInvolved(name) {
       return localData.expenses.some(e => e.payer === name || name in parseSplit(e));
+    }
+
+    async function kickMember(sub) {
+      const m = getMeta().members.find(x => x.sub === sub);
+      if (!m) return;
+      const clean = !isInvolved(m.name);
+      const msg = clean
+        ? `"${m.name}" chưa có giao dịch nào, nên khi xóa khỏi nhóm, tên và thông tin của họ cũng bị xóa luôn.`
+        : `"${m.name}" đã có giao dịch nên chỉ xóa khỏi nhóm được, không xóa được thông tin của họ. Tên và các khoản chi vẫn được giữ để quyết toán, họ không xem được nhóm nữa.`;
+      if (!(await uiConfirm(msg, { title: `Xóa ${m.name} khỏi nhóm?`, ok: 'Xóa khỏi nhóm', danger: true }))) return;
+      showLoad(true);
+      try {
+        const r = await api('/api/groups', { method: 'POST', body: { action: 'kick', code: currentG, sub } });
+        await refreshGroup();
+        toast(r.removed ? `Đã xóa ${m.name} khỏi nhóm` : `Đã xóa ${m.name} khỏi nhóm, thông tin được giữ để quyết toán`);
+      } catch (e) { fail(e); }
+      finally { showLoad(false); }
     }
 
     async function removeUserNow(i) {

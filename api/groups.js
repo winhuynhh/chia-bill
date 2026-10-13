@@ -87,6 +87,22 @@ function addMember(g, user, profile, asName) {
   g.members[user.sub] = { email: user.email, name, role: g.members[user.sub]?.role || 'member', joinedAt: Date.now() };
 }
 
+// Đưa một thành viên ra khỏi nhóm. Chưa dính giao dịch nào: xóa luôn tên và thông tin. Đã có giao dịch: chỉ rời, giữ lại tên để quyết toán.
+function detachMember(g, sub) {
+  const m = g.members[sub];
+  delete g.members[sub];
+  const removed = !isInvolved(g, m.name);
+  if (removed) {
+    g.users = (g.users || []).filter((u) => u !== m.name);
+    if (g.payInfo) delete g.payInfo[m.name];
+    if (g.links) delete g.links[sub];
+  } else {
+    g.left = g.left || {};
+    g.left[sub] = { email: m.email, name: m.name, leftAt: Date.now() };
+  }
+  return removed;
+}
+
 // Quét mọi key group:* trong database (gồm cả nhóm tạo từ bản cũ, chưa có trong index).
 async function scanGroupCodes() {
   const out = [];
@@ -318,22 +334,26 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, settings: groupSettings(g) });
     }
 
+    // ---------- Trưởng nhóm / admin xóa thành viên khỏi nhóm (cùng quy tắc với rời nhóm) ----------
+    if (action === 'kick') {
+      if (!canManage(g, user)) return bad(res, 'Chỉ trưởng nhóm mới xóa được thành viên', 403);
+      const sub = String(body.sub || '');
+      const m = g.members?.[sub];
+      if (!m) return bad(res, 'Người này không còn trong nhóm', 404);
+      if (m.role === 'owner') return bad(res, 'Không thể xóa trưởng nhóm khỏi nhóm', 400);
+      if (sub === user.sub) return bad(res, 'Muốn tự rời nhóm, hãy dùng nút Rời nhóm', 400);
+      const removed = detachMember(g, sub);
+      await kv.set(key, g);
+      await kv.srem(ukey(sub), cs(code));
+      return res.status(200).json({ success: true, removed, name: m.name });
+    }
+
     // ---------- Thành viên rời nhóm: vẫn giữ tên + chi tiêu + thông tin nhận tiền để quyết toán ----------
     if (action === 'leave') {
       const m = g.members?.[user.sub];
       if (!m) return bad(res, 'Bạn không phải thành viên của nhóm này', 403);
       if (m.role === 'owner') return bad(res, 'Trưởng nhóm không thể rời nhóm. Hãy xóa nhóm nếu không dùng nữa.', 400);
-      delete g.members[user.sub];
-      // Chưa dính giao dịch nào: rời nhóm và xóa luôn thông tin. Đã có giao dịch: chỉ rời, giữ lại tên để quyết toán.
-      const removed = !isInvolved(g, m.name);
-      if (removed) {
-        g.users = (g.users || []).filter((u) => u !== m.name);
-        if (g.payInfo) delete g.payInfo[m.name];
-        if (g.links) delete g.links[user.sub];
-      } else {
-        g.left = g.left || {};
-        g.left[user.sub] = { email: m.email, name: m.name, leftAt: Date.now() };
-      }
+      const removed = detachMember(g, user.sub);
       await kv.set(key, g);
       await kv.srem(ukey(user.sub), cs(code));
       return res.status(200).json({ success: true, removed });
