@@ -77,6 +77,18 @@ export function appUrl(req) {
 export const canAccess = (g, user) => !!(g && (isAdmin(user.email) || g.members?.[user.sub]));
 export const canManage = (g, user) => !!(g && (isAdmin(user.email) || g.members?.[user.sub]?.role === 'owner'));
 
+// Quyền thao tác dữ liệu chia tiền. Mặc định thành viên được thêm khoản chi, chưa được sửa/xóa (trưởng nhóm bật).
+export const groupSettings = (g) => ({
+  memberCanAdd: g?.settings?.memberCanAdd !== false,
+  memberCanEdit: g?.settings?.memberCanEdit === true,
+});
+export function perms(g, user) {
+  const manage = canManage(g, user);
+  const member = !!g?.members?.[user.sub];
+  const s = groupSettings(g);
+  return { canAdd: manage || (member && s.memberCanAdd), canEdit: manage || (member && s.memberCanEdit) };
+}
+
 // Dữ liệu trả cho giao diện (không lộ sub/invite của người khác khi không cần).
 export function groupView(g, user) {
   const admin = isAdmin(user.email);
@@ -91,6 +103,8 @@ export function groupView(g, user) {
       code: g.code,
       role: myRole,
       canManage: manage,
+      settings: groupSettings(g),
+      ...perms(g, user),
       isAdmin: admin,
       ownerEmail: g.ownerEmail || '',
       left: Object.values(g.left || {}).map((x) => x.name),

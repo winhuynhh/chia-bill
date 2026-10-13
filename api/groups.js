@@ -1,6 +1,6 @@
 import { kv } from '@vercel/kv';
 import {
-  requireUser, isAdmin, canManage, normCode, isEmail, cs, unCs, appUrl, profilePay,
+  requireUser, isAdmin, canManage, groupSettings, normCode, isEmail, cs, unCs, appUrl, profilePay,
 } from './_lib.js';
 import { sendInviteMail, mailConfigured, inviteText } from './_mail.js';
 
@@ -251,6 +251,16 @@ export default async function handler(req, res) {
       }
       await kv.srem(ikey(to), cs(code));
       return res.status(200).json({ success: true });
+    }
+
+    // ---------- Trưởng nhóm bật/tắt quyền của thành viên ----------
+    if (action === 'settings') {
+      if (!canManage(g, user)) return bad(res, 'Chỉ trưởng nhóm mới đổi được quyền của thành viên', 403);
+      g.settings = { ...(g.settings || {}) };
+      if (typeof body.memberCanAdd === 'boolean') g.settings.memberCanAdd = body.memberCanAdd;
+      if (typeof body.memberCanEdit === 'boolean') g.settings.memberCanEdit = body.memberCanEdit;
+      await kv.set(key, g);
+      return res.status(200).json({ success: true, settings: groupSettings(g) });
     }
 
     // ---------- Thành viên rời nhóm: vẫn giữ tên + chi tiêu + thông tin nhận tiền để quyết toán ----------

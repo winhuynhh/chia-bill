@@ -1,12 +1,30 @@
 import { kv } from '@vercel/kv';
 import crypto from 'node:crypto';
-import { requireUser, isAdmin, sanitizePay, profilePay, normCode, canAccess, groupView } from './_lib.js';
+import { requireUser, isAdmin, sanitizePay, profilePay, normCode, canAccess, groupView, perms } from './_lib.js';
 
 // Dữ liệu nhóm nằm ở key group:<code> (tạo/mời/đổi mã xem api/groups.js).
 // Ở đây chỉ đọc và ghi dữ liệu chia tiền, và chỉ thành viên đã tham gia (hoặc admin) mới truy cập được.
 //   expenses: {id, desc, amount, payer, splitDetails(JSON string), settle?, by, at}[]
 //   payInfo:  { [tênThànhViên]: { method:'momo', phone, accName } | { method:'bank', bankName, bankAccount, bankHolder } }
 //   links:    { [googleSub]: tênThànhViên }
+
+// Kiểm tra dữ liệu một khoản chi (dùng cho thêm và sửa).
+function validateExpense(g, body, settle) {
+  const desc = String(body.desc || '').trim().slice(0, 200);
+  const amount = Number(body.amount);
+  const payer = String(body.payer || '');
+  if (!desc || !Number.isFinite(amount) || amount <= 0) return { error: 'Thiếu hoặc sai thông tin hóa đơn' };
+  if (!g.users.includes(payer)) return { error: 'Người trả không thuộc nhóm' };
+  let split;
+  try { split = JSON.parse(body.splitDetails || '{}'); } catch { return { error: 'splitDetails không hợp lệ' }; }
+  if (!split || typeof split !== 'object' || Array.isArray(split)) return { error: 'splitDetails không hợp lệ' };
+  for (const [u, v] of Object.entries(split)) {
+    if (!g.users.includes(u) || !Number.isFinite(Number(v)) || Number(v) < 0) return { error: 'Chia tiền có thành viên hoặc số tiền không hợp lệ' };
+  }
+  if (Object.keys(split).length === 0) return { error: 'Chưa chọn người chịu tiền' };
+  if (settle && Object.keys(split).length !== 1) return { error: 'Settle chỉ có 1 người nhận' };
+  return { desc, amount, payer, split };
+}
 
 // Gộp người tham gia `from` vào `to`: chuyển toàn bộ khoản chi, thông tin nhận tiền.
 function mergeParticipants(g, from, to) {
@@ -56,6 +74,7 @@ export default async function handler(req, res) {
     }
 
     const body = req.body || {};
+    const pm = perms(g, user);
     g.users = g.users || [];
     g.expenses = g.expenses || [];
     g.payInfo = g.payInfo || {};
@@ -63,6 +82,7 @@ export default async function handler(req, res) {
 
     switch (body.action) {
       case 'addUser': {
+        if (!pm.canAdd) return bad(res, 'Trưởng nhóm chưa cho phép thành viên thêm người', 403);
         const name = String(body.userName || '').trim().slice(0, 40);
         if (!name) return bad(res, 'Thiếu tên thành viên');
         if (!g.users.includes(name)) g.users.push(name);
@@ -70,34 +90,15 @@ export default async function handler(req, res) {
       }
 
       case 'addExpense': {
-        const desc = String(body.desc || '').trim().slice(0, 200);
-        const amount = Number(body.amount);
-        const payer = String(body.payer || '');
-        if (!desc || !Number.isFinite(amount) || amount <= 0) return bad(res, 'Thiếu hoặc sai thông tin hóa đơn');
-        if (!g.users.includes(payer)) return bad(res, 'Người trả không thuộc nhóm');
-
-        let split;
-        try {
-          split = JSON.parse(body.splitDetails || '{}');
-        } catch {
-          return bad(res, 'splitDetails không hợp lệ');
-        }
-        if (!split || typeof split !== 'object' || Array.isArray(split)) return bad(res, 'splitDetails không hợp lệ');
-        for (const [u, v] of Object.entries(split)) {
-          if (!g.users.includes(u) || !Number.isFinite(Number(v)) || Number(v) < 0) {
-            return bad(res, 'Chia tiền có thành viên hoặc số tiền không hợp lệ');
-          }
-        }
-        if (Object.keys(split).length === 0) return bad(res, 'Chưa chọn người chịu tiền');
-
         const settle = body.settle === true;
-        if (settle && Object.keys(split).length !== 1) return bad(res, 'Settle chỉ có 1 người nhận');
-
+        if (!settle && !pm.canAdd) return bad(res, 'Trưởng nhóm chưa cho phép thành viên thêm khoản chi', 403);
+        const v = validateExpense(g, body, settle);
+        if (v.error) return bad(res, v.error);
         const id = /^[\w-]{8,64}$/.test(String(body.id || '')) ? String(body.id) : crypto.randomUUID();
         if (g.expenses.some((e) => e.id === id)) break; // chống gửi trùng
         g.expenses.push({
-          id, desc, amount, payer,
-          splitDetails: JSON.stringify(split),
+          id, desc: v.desc, amount: v.amount, payer: v.payer,
+          splitDetails: JSON.stringify(v.split),
           settle,
           by: user.email,
           at: Date.now(),
@@ -105,13 +106,26 @@ export default async function handler(req, res) {
         break;
       }
 
+      case 'editExpense': {
+        if (!pm.canEdit) return bad(res, 'Trưởng nhóm chưa cho phép thành viên sửa giao dịch', 403);
+        const e = g.expenses.find((x) => x.id === body.id);
+        if (!e) return bad(res, 'Không tìm thấy giao dịch', 404);
+        if (e.settle) return bad(res, 'Giao dịch settle không sửa được, hãy xóa rồi ghi lại', 400);
+        const v = validateExpense(g, body, false);
+        if (v.error) return bad(res, v.error);
+        Object.assign(e, { desc: v.desc, amount: v.amount, payer: v.payer, splitDetails: JSON.stringify(v.split), editedBy: user.email, editedAt: Date.now() });
+        break;
+      }
+
       case 'deleteExpense': {
+        if (!pm.canEdit) return bad(res, 'Trưởng nhóm chưa cho phép thành viên xóa giao dịch', 403);
         const idx = g.expenses.findIndex((e) => e.id === body.id);
         if (idx !== -1) g.expenses.splice(idx, 1);
         break;
       }
 
       case 'setPayInfo': {
+        if (!pm.canAdd) return bad(res, 'Trưởng nhóm chưa cho phép thành viên sửa thông tin này', 403);
         const member = String(body.memberName || '');
         if (!g.users.includes(member)) return bad(res, 'Thành viên không tồn tại');
         if (!body.pay) {
