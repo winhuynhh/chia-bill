@@ -470,6 +470,7 @@
           <p class="card-s">Chọn tên của bạn để app báo số tiền bạn cần đóng hoặc sẽ nhận.</p>
           <div class="stack">
             <select id="meSelect" onchange="linkMeNow()" class="sel"></select>
+            <p class="hint" id="meHint">Nếu trưởng nhóm đã nhập tên bạn từ trước, hãy chọn đúng tên đó để gộp các khoản chi cũ vào tài khoản của bạn.</p>
             <div class="paybox"><small>Tài khoản nhận tiền của bạn</small><b id="myPayText"></b></div>
             <button onclick="openPay('me')" class="btn soft block"><i class="fa-solid fa-pen"></i> Sửa tài khoản nhận tiền</button>
           </div>
@@ -491,6 +492,8 @@
           <div id="inviteForm">
             <div class="sub-t">Mời thêm bằng email</div>
             <textarea id="inviteEmails" rows="2" class="ta" placeholder="Nhập email, cách nhau bằng dấu phẩy (tối đa 10)"></textarea>
+            <label class="field" style="margin-top:10px;"><span>Người này đã được nhập tay trong nhóm?</span><select id="inviteAs" class="sel"></select></label>
+            <p class="hint" style="margin-top:6px;">Chọn tên tạm nếu có, khi họ đồng ý thì các khoản chi cũ tự gắn vào tài khoản Google của họ. Chỉ chọn khi mời đúng 1 email.</p>
             <button onclick="sendInvites()" class="btn primary block" style="margin-top:10px;"><i class="fa-solid fa-paper-plane"></i> Gửi lời mời</button>
             <div id="inviteResult" style="margin-top:12px;"></div>
             <div id="pendingInvites" style="margin-top:12px;"></div>
@@ -1123,15 +1126,35 @@
       if (await mutate({ action: 'addUser', userName: n })) { $('userName').value = ""; toast(`Đã thêm ${n}`); }
     }
 
-    function linkMeNow() {
-      mutate({ action: 'linkMe', memberName: $('meSelect').value });
+    async function linkMeNow() {
+      const v = $('meSelect').value;
+      const mine = myMember();
+      if (!v) { mutate({ action: 'linkMe', memberName: '' }); return; }
+      if (v === mine) return;
+      const role = getMeta().role;
+      if (mine && (role === 'member' || role === 'owner')) {
+        const okMerge = await uiConfirm(`Gộp "${mine}" vào "${v}"? Mọi khoản chi của "${mine}" sẽ được chuyển sang "${v}" và bạn dùng tên "${v}" từ giờ.`, { title: 'Nhận lại tên này?', ok: 'Gộp', cancel: 'Không' });
+        if (!okMerge) { $('meSelect').value = mine; return; }
+      }
+      if (await mutate({ action: 'claim', memberName: v })) toast(`Bạn đang dùng tên "${v}"`);
+      else render();
     }
 
     // ---------- Thành viên & lời mời ----------
     const ROLE_LABEL = { owner: 'Trưởng nhóm', admin: 'Admin', member: 'Thành viên' };
 
+    // Tên đã được nhập tay và chưa gắn với tài khoản Google nào.
+    function freeNames() {
+      const linked = new Set(Object.values(localData.links || {}));
+      const reserved = new Set(getMeta().invites.map(v => v.asName).filter(Boolean));
+      return localData.users.filter(u => !linked.has(u) && !isLeft(u) && !reserved.has(u));
+    }
+
     function renderMembers() {
       const meta = getMeta();
+      const keepAs = $('inviteAs').value;
+      $('inviteAs').innerHTML = '<option value="">Không, tạo người mới theo tên Google</option>' + freeNames().map(u => `<option value="${esc(u)}">Đúng, họ là "${esc(u)}"</option>`).join('');
+      if (freeNames().includes(keepAs)) $('inviteAs').value = keepAs;
       $('roleBadge').textContent = ROLE_LABEL[meta.role] || '';
       $('roleBadge').style.display = meta.role ? 'inline-flex' : 'none';
 
@@ -1144,7 +1167,7 @@
       $('inviteForm').style.display = meta.canManage ? 'block' : 'none';
       $('pendingInvites').innerHTML = meta.invites.length ? `<div class="sub-t" style="margin-top:0;">Đang chờ đồng ý (${meta.invites.length})</div>` +
         meta.invites.map((v, i) => `<div class="pend">
-          <span style="overflow:hidden;text-overflow:ellipsis;">${esc(v.email)}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;">${esc(v.email)}${v.asName ? ` <span class="hint">sẽ nhận tên ${esc(v.asName)}</span>` : ''}</span>
           <button class="ibtn del" title="Huỷ lời mời" aria-label="Huỷ lời mời" onclick="cancelInvite(${i})"><i class="fa-solid fa-xmark"></i></button></div>`).join('') : '';
     }
 
@@ -1181,8 +1204,9 @@
       if (!raw) { toast('Hãy nhập ít nhất 1 email', 'err'); $('inviteEmails').focus(); return; }
       showLoad(true);
       try {
-        lastInvite = await api('/api/groups', { method: 'POST', body: { action: 'invite', code: currentG, emails: raw } });
+        lastInvite = await api('/api/groups', { method: 'POST', body: { action: 'invite', code: currentG, emails: raw, asName: $('inviteAs').value } });
         $('inviteEmails').value = '';
+        $('inviteAs').value = '';
         renderInviteResult();
         await refreshGroup();
       } catch (e) { fail(e); }
@@ -1623,14 +1647,15 @@
         const p = payOf(u);
         const icon = !p ? '<i class="fa-solid fa-pen"></i>'
           : (p.method === 'bank' ? '<i class="fa-solid fa-building-columns" style="color:var(--info);"></i>' : '<i class="fa-solid fa-mobile-screen" style="color:var(--brand);"></i>');
-        return `<button type="button" onclick="editPay(${i})" title="Bấm để nhập tài khoản nhận tiền" class="chip">${av(u, 'xs')}${lname(u)}${u === mine ? ' (bạn)' : ''} ${icon}</button>`;
+        return `<button type="button" onclick="editPay(${i})" title="Bấm để nhập tài khoản nhận tiền" class="chip">${av(u, 'xs')}${lname(u)}${u === mine ? ' (bạn)' : ''}${(!isLeft(u) && !Object.values(localData.links).includes(u)) ? ' <span class="hint">nhập tay</span>' : ''} ${icon}</button>`;
       }).join('');
 
       $('expPayer').innerHTML = '<option value="">Chọn người trả</option>' + users.filter(u => !isLeft(u)).map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
       if (users.includes(keepPayer)) $('expPayer').value = keepPayer;
 
       if (document.activeElement !== $('meSelect')) {
-        $('meSelect').innerHTML = '<option value="">Tôi là thành viên nào?</option>' + users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
+        const takenByOthers = new Set(Object.entries(localData.links).filter(([sub]) => !me || sub !== me.sub).map(([, n]) => n));
+        $('meSelect').innerHTML = '<option value="">Tôi là thành viên nào?</option>' + users.filter(u => !takenByOthers.has(u)).map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
         $('meSelect').value = mine;
       }
 
