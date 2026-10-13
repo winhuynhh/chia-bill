@@ -187,6 +187,11 @@
     .seg.pay button.on { color: var(--brand); }
     .panel { display: none; }
     .panel.on { display: block; }
+    .flt { background:#fff; border-radius: var(--r-md); box-shadow: var(--shadow); padding: 10px 12px; margin-bottom: 12px; }
+    .flt-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .flt .sel, .flt .inp { min-height: 40px; padding: 6px 10px; width:auto; flex:1; min-width: 130px; font-size: 14px; }
+    .flt-info { font-size: 12.5px; color: var(--mute); margin-top: 8px; }
+    .danger-zone { border: 1.5px solid var(--neg-t); }
     .fab { position: fixed; right: max(16px, calc(50% - 364px)); bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 45; height: 56px; padding: 0 22px 0 18px; border-radius: 999px; background: var(--brand); color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 24px rgba(176,18,95,.4); transition: transform .12s, background .15s; }
     .fab:hover { background: var(--brand-d); }
     .fab:active { transform: scale(.96); }
@@ -420,6 +425,24 @@
         </div>
       </div>
 
+      <div id="fltBar" class="flt">
+        <div class="flt-row">
+          <select id="fltMode" class="sel" onchange="setFilter()" aria-label="Lọc giao dịch">
+            <option value="all">Tất cả giao dịch</option>
+            <option value="since">Chưa settle (sau lần settle gần nhất)</option>
+            <option value="7">7 ngày gần đây</option>
+            <option value="30">30 ngày gần đây</option>
+            <option value="month">Tháng này</option>
+            <option value="range">Chọn khoảng ngày...</option>
+          </select>
+          <span id="fltRange" class="flt-row hidden" style="flex:2;">
+            <input type="date" id="fltFrom" class="inp" onchange="setFilter()" aria-label="Từ ngày">
+            <input type="date" id="fltTo" class="inp" onchange="setFilter()" aria-label="Đến ngày">
+          </span>
+        </div>
+        <div id="fltInfo" class="flt-info"></div>
+      </div>
+
       <section id="pn-exp" class="panel on"><div id="expList"></div></section>
 
       <section id="pn-bal" class="panel"><div id="balList"></div></section>
@@ -473,6 +496,8 @@
             <div id="pendingInvites" style="margin-top:12px;"></div>
           </div>
         </div>
+
+        <div class="card danger-zone" id="dangerZone"></div>
       </section>
     </div>
 
@@ -596,6 +621,7 @@
     let paySaving = false;
     let loadCount = 0;
     let curTab = 'exp';
+    let filt = { mode: 'all', from: '', to: '' };
     // Link mời trong email có dạng /?invite=<mã nhóm>
     let deepLink = '';
     try { const q = new URLSearchParams(location.search); deepLink = (q.get('invite') || q.get('g') || '').trim().toLowerCase().replace(/\s+/g, '-'); } catch (e) {}
@@ -1033,6 +1059,7 @@
         localData = data;
         lastInvite = null;
         $('inviteResult').innerHTML = '';
+        if (!sameGroup) { filt = { mode: 'all', from: '', to: '' }; $('fltMode').value = 'all'; $('fltFrom').value = ''; $('fltTo').value = ''; $('fltRange').classList.add('hidden'); }
         openApp(sameGroup);
         render();
       } catch (e) { fail(e); }
@@ -1065,6 +1092,7 @@
 
     function setTab(name) {
       curTab = name;
+      $('fltBar').style.display = (name === 'exp' || name === 'table') ? 'block' : 'none';
       ['exp', 'bal', 'table', 'people'].forEach((t) => {
         $('pn-' + t).classList.toggle('on', t === name);
         $('tb-' + t).classList.toggle('on', t === name);
@@ -1336,6 +1364,93 @@
       return out;
     }
 
+    // ---------- Bộ lọc giao dịch (chỉ áp dụng cho danh sách và bảng; số dư luôn tính toàn bộ) ----------
+    const isLeft = (u) => (getMeta().left || []).includes(u);
+    const lname = (u) => esc(u) + (isLeft(u) ? ' <span class="hint">(đã rời)</span>' : '');
+
+    function setFilter() {
+      filt.mode = $('fltMode').value;
+      filt.from = $('fltFrom').value;
+      filt.to = $('fltTo').value;
+      $('fltRange').classList.toggle('hidden', filt.mode !== 'range');
+      if (localData.users.length || localData.expenses.length) { renderExpenses(); renderTable(computeBalances()); }
+      renderFilterInfo();
+    }
+
+    function filterRange() {
+      const now = new Date();
+      const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const m = filt.mode;
+      if (m === '7') return { from: dayStart(now) - 6 * 864e5, to: Infinity };
+      if (m === '30') return { from: dayStart(now) - 29 * 864e5, to: Infinity };
+      if (m === 'month') return { from: new Date(now.getFullYear(), now.getMonth(), 1).getTime(), to: Infinity };
+      if (m === 'since') {
+        const last = localData.expenses.filter(e => e.settle).reduce((a, e) => Math.max(a, e.at || 0), 0);
+        return { from: last ? last + 1 : 0, to: Infinity, last };
+      }
+      if (m === 'range') {
+        const f = filt.from ? new Date(filt.from + 'T00:00:00').getTime() : 0;
+        const t = filt.to ? new Date(filt.to + 'T23:59:59.999').getTime() : Infinity;
+        return { from: f, to: t };
+      }
+      return { from: 0, to: Infinity };
+    }
+    const inFilter = (e) => { const r = filterRange(); const t = e.at || 0; return t >= r.from && t <= r.to; };
+
+    function renderFilterInfo() {
+      const all = localData.expenses.filter(e => !e.settle);
+      const shown = all.filter(inFilter);
+      const total = shown.reduce((a, e) => a + e.amount, 0);
+      let t = filt.mode === 'all' ? '' : `Đang xem ${shown.length}/${all.length} khoản chi, tổng ${fmt(total)}đ. `;
+      if (filt.mode === 'since') {
+        const r = filterRange();
+        t += r.last ? `Tính từ sau lần settle ${fmtDate(r.last)}.` : 'Chưa có lần settle nào nên hiện tất cả.';
+      }
+      if (filt.mode !== 'all') t += ' Số dư và Quyết toán vẫn tính trên toàn bộ giao dịch.';
+      $('fltInfo').textContent = t;
+      $('fltInfo').style.display = t ? 'block' : 'none';
+    }
+
+    async function leaveGroup() {
+      if (!(await uiConfirm('Sau khi rời, bạn không xem được nhóm này nữa. Tên, các khoản chi và tài khoản nhận tiền của bạn vẫn được giữ trong nhóm để cả nhóm quyết toán. Nếu được mời lại, bạn sẽ nối lại đúng lịch sử cũ.', { title: 'Rời nhóm?', ok: 'Rời nhóm', cancel: 'Ở lại', danger: true }))) return;
+      showLoad(true);
+      try {
+        await api('/api/groups', { method: 'POST', body: { action: 'leave', code: currentG } });
+        toast('Đã rời nhóm');
+        exitGroup();
+      } catch (e) { fail(e); }
+      finally { showLoad(false); }
+    }
+
+    async function deleteGroupOwner() {
+      const code = currentG;
+      const t = await uiPrompt(`Xóa nhóm "${code}" cùng toàn bộ khoản chi, không khôi phục được.\nGõ lại mã nhóm để xác nhận:`, '', { title: 'Xóa nhóm', ok: 'Xóa nhóm', danger: true });
+      if (t === null) return;
+      if (t.trim().toLowerCase() !== code) { toast('Mã không khớp, chưa xóa gì cả.', 'err'); return; }
+      showLoad(true);
+      try {
+        await api('/api/groups', { method: 'POST', body: { action: 'delete', code } });
+        toast(`Đã xóa nhóm "${code}"`);
+        exitGroup();
+      } catch (e) { fail(e); }
+      finally { showLoad(false); }
+    }
+
+    function renderDanger() {
+      const m = getMeta();
+      const el = $('dangerZone');
+      let h = '';
+      if (m.role === 'member') {
+        h = `<div class="card-h">Rời nhóm</div><p class="card-s">Bạn vẫn được giữ tên và các khoản chi trong nhóm để mọi người quyết toán. Hãy settle xong trước khi rời.</p>
+          <button class="btn danger" onclick="leaveGroup()"><i class="fa-solid fa-right-from-bracket"></i> Rời nhóm</button>`;
+      } else if (m.canManage) {
+        h = `<div class="card-h">Xóa nhóm</div><p class="card-s">Xóa vĩnh viễn nhóm và mọi khoản chi. ${m.role === 'owner' ? 'Trưởng nhóm không thể rời nhóm, chỉ có thể xóa.' : ''}</p>
+          <button class="btn danger" onclick="deleteGroupOwner()"><i class="fa-regular fa-trash-can"></i> Xóa nhóm</button>`;
+      }
+      el.innerHTML = h;
+      el.style.display = h ? 'block' : 'none';
+    }
+
     // ---------- Render ----------
     function renderHero(bal) {
       const { users, expenses } = localData;
@@ -1369,12 +1484,14 @@
 
     function renderExpenses() {
       const { users, expenses } = localData;
-      const bills = expenses.filter(e => !e.settle).slice().reverse();
-      const settles = expenses.filter(e => e.settle).slice().reverse();
+      const bills = expenses.filter(e => !e.settle && inFilter(e)).slice().reverse();
+      const settles = expenses.filter(e => e.settle && inFilter(e)).slice().reverse();
       const delRow = (e) => `<div class="foot"><button class="lnk neg" onclick="deleteExpense('${esc(e.id)}')"><i class="fa-regular fa-trash-can"></i> Xóa</button></div>`;
 
       let h = '';
-      if (!bills.length && !settles.length) {
+      if (!bills.length && !settles.length && expenses.length) {
+        h = `<div class="empty card"><b>Không có giao dịch nào khớp bộ lọc</b>Đổi bộ lọc ở trên để xem các giao dịch khác.</div>`;
+      } else if (!bills.length && !settles.length) {
         h = `<div class="empty card"><b>Chưa có khoản chi nào</b>Ghi lại khoản đầu tiên, app sẽ tự tính ai nợ ai.<br><button class="btn primary" onclick="openExp()"><i class="fa-solid fa-plus"></i> Thêm khoản chi đầu tiên</button></div>`;
       }
       h += bills.map(e => {
@@ -1412,7 +1529,7 @@
         const piLine = pi ? `<div class="pi"><i class="fa-solid ${pi.method === 'bank' ? 'fa-building-columns' : 'fa-mobile-screen'}"></i> ${esc(payText(pi))}</div>`
           : `<div class="pi">Chưa có tài khoản nhận tiền. <button class="lnk" onclick="editPay(${idx})">Nhập</button></div>`;
         return `<div class="bal ${cls}">${av(u, 'lg')}
-          <div class="mid"><b>${esc(u)}${u === mine ? ' (bạn)' : ''}</b>
+          <div class="mid"><b>${lname(u)}${u === mine ? ' (bạn)' : ''}</b>
             <small class="num">Đã chi ${fmt(bal.p[u])}đ, dùng ${fmt(bal.s[u])}đ</small>${piLine}</div>
           <div class="right"><span class="badge ${cls}">${v > 0 ? 'Cần đóng' : (v < 0 ? 'Sẽ nhận' : 'Xong')}</span>${v !== 0 ? `<span class="v num">${fmt(Math.abs(v))}đ</span>` : ''}</div></div>`;
       }).join('');
@@ -1425,8 +1542,9 @@
       const colSpan = users.length + 4;
       $('tableHead').innerHTML = `<tr><th class="sticky-col">Khoản chi</th><th>Tổng</th>${users.map(u => `<th>${esc(u)}</th>`).join('')}<th>Người trả</th><th class="no-capture"></th></tr>`;
 
-      const bills = expenses.filter(e => !e.settle);
-      const settles = expenses.filter(e => e.settle);
+      const bills = expenses.filter(e => !e.settle && inFilter(e));
+      const settles = expenses.filter(e => e.settle && inFilter(e));
+      const allSettles = expenses.some(e => e.settle);
       const delBtn = (e) => `<td class="no-capture"><button onclick="deleteExpense('${esc(e.id)}')" class="ibtn del" aria-label="Xóa khoản chi"><i class="fa-regular fa-trash-can"></i></button></td>`;
 
       let bdy = bills.map(e => {
@@ -1460,10 +1578,10 @@
       $('tableBody').innerHTML = bdy;
 
       const { s, p, sent, recv, d } = bal;
-      const fTot = bills.reduce((a, e) => a + e.amount, 0);
+      const fTot = expenses.filter(e => !e.settle).reduce((a, e) => a + e.amount, 0);
       let foot = `<tr class="tf"><td class="sticky-col">Tổng dùng</td><td class="col-money num">${fmt(fTot)}</td>${users.map(u => `<td class="num">${fmt(s[u])}</td>`).join('')}<td></td><td class="no-capture"></td></tr>
         <tr class="tf"><td class="sticky-col">Đã chi</td><td>-</td>${users.map(u => `<td class="num">${fmt(p[u])}</td>`).join('')}<td></td><td class="no-capture"></td></tr>`;
-      if (settles.length) {
+      if (allSettles) {
         foot += `<tr class="tf"><td class="sticky-col">Đã settle</td><td>-</td>${users.map(u => {
           const net = Math.round(sent[u] - recv[u]);
           if (net > 0) return `<td class="pos-t num">Đã trả ${fmt(net)}</td>`;
@@ -1495,18 +1613,20 @@
       renderMyPay();
       renderMembers();
       renderHero(bal);
+      renderDanger();
       renderExpenses();
       renderBalances(bal);
       renderTable(bal);
+      renderFilterInfo();
 
       $('userTags').innerHTML = users.map((u, i) => {
         const p = payOf(u);
         const icon = !p ? '<i class="fa-solid fa-pen"></i>'
           : (p.method === 'bank' ? '<i class="fa-solid fa-building-columns" style="color:var(--info);"></i>' : '<i class="fa-solid fa-mobile-screen" style="color:var(--brand);"></i>');
-        return `<button type="button" onclick="editPay(${i})" title="Bấm để nhập tài khoản nhận tiền" class="chip">${av(u, 'xs')}${esc(u)}${u === mine ? ' (bạn)' : ''} ${icon}</button>`;
+        return `<button type="button" onclick="editPay(${i})" title="Bấm để nhập tài khoản nhận tiền" class="chip">${av(u, 'xs')}${lname(u)}${u === mine ? ' (bạn)' : ''} ${icon}</button>`;
       }).join('');
 
-      $('expPayer').innerHTML = '<option value="">Chọn người trả</option>' + users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
+      $('expPayer').innerHTML = '<option value="">Chọn người trả</option>' + users.filter(u => !isLeft(u)).map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
       if (users.includes(keepPayer)) $('expPayer').value = keepPayer;
 
       if (document.activeElement !== $('meSelect')) {
@@ -1514,7 +1634,7 @@
         $('meSelect').value = mine;
       }
 
-      $('areaEqual').innerHTML = users.map(u => `<label><input type="checkbox" class="p-check" value="${esc(u)}" checked><span>${esc(u)}</span></label>`).join('');
+      $('areaEqual').innerHTML = users.map(u => `<label><input type="checkbox" class="p-check" value="${esc(u)}" ${isLeft(u) ? '' : 'checked'}><span>${esc(u)}${isLeft(u) ? ' (đã rời)' : ''}</span></label>`).join('');
       $('areaExact').innerHTML = users.map(u => `<div class="xr"><span>${esc(u)}</span><input type="number" class="inp exact-in" data-user="${esc(u)}" data-manual="false" inputmode="numeric" oninput="handleExactInput(this)"></div>`).join('');
       recalcExact();
 
@@ -1570,7 +1690,7 @@
         }
         return `<div class="tcard ${t.from === mine ? 'me' : ''}">
           <div class="t-head">
-            <div class="t-who">${av(t.from, 'xs')}${esc(t.from)} <i class="fa-solid fa-arrow-right"></i> ${av(t.to, 'xs')}${esc(t.to)}</div>
+            <div class="t-who">${av(t.from, 'xs')}${lname(t.from)} <i class="fa-solid fa-arrow-right"></i> ${av(t.to, 'xs')}${lname(t.to)}</div>
             <div class="t-amt num">${fmt(t.amount)}đ</div>
           </div>
           ${tag}
