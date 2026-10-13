@@ -1,6 +1,6 @@
 import { kv } from '@vercel/kv';
 import crypto from 'node:crypto';
-import { requireUser, sanitizePay, profilePay, normCode, canAccess, groupView } from './_lib.js';
+import { requireUser, isAdmin, sanitizePay, profilePay, normCode, canAccess, groupView } from './_lib.js';
 
 // Dữ liệu nhóm nằm ở key group:<code> (tạo/mời/đổi mã xem api/groups.js).
 // Ở đây chỉ đọc và ghi dữ liệu chia tiền, và chỉ thành viên đã tham gia (hoặc admin) mới truy cập được.
@@ -16,12 +16,18 @@ export default async function handler(req, res) {
 
   try {
     const src = req.method === 'GET' ? req.query : req.body || {};
-    const code = normCode(src.groupId);
-    if (!code) return bad(res, 'Thiếu hoặc sai mã nhóm');
-
-    const key = `group:${code}`;
-    const g = await kv.get(key);
+    const rawCode = String(src.groupId || '').trim();
+    if (!rawCode) return bad(res, 'Thiếu hoặc sai mã nhóm');
+    let code = normCode(rawCode);
+    let key = code ? `group:${code}` : '';
+    let g = key ? await kv.get(key) : null;
+    // Admin mở được cả nhóm cũ có mã không theo chuẩn mới.
+    if (!g && isAdmin(user.email)) {
+      const g2 = await kv.get(`group:${rawCode}`);
+      if (g2 && typeof g2 === 'object') { g = g2; code = rawCode; key = `group:${rawCode}`; }
+    }
     if (!g) return bad(res, 'Nhóm không tồn tại', 404);
+    if (!g.code) g.code = code;
     if (!canAccess(g, user)) return bad(res, 'Bạn chưa tham gia nhóm này. Hãy nhờ trưởng nhóm mời qua email.', 403);
 
     if (req.method === 'GET') return res.status(200).json(groupView(g, user));

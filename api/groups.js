@@ -18,8 +18,9 @@ const INDEX = 'groups:index';
 
 const bad = (res, msg, status = 400) => res.status(status).json({ error: msg });
 
-const summary = (g, user) => ({
-  code: g.code,
+const summary = (g, user, code) => ({
+  code: code || g.code,
+  legacy: !g.members,
   role: g.members?.[user.sub]?.role || (isAdmin(user.email) ? 'admin' : 'member'),
   ownerEmail: g.ownerEmail || '',
   memberCount: Object.keys(g.members || {}).length,
@@ -28,7 +29,8 @@ const summary = (g, user) => ({
 
 async function loadMany(codes) {
   if (!codes.length) return [];
-  const gs = await kv.mget(...codes.map(gkey));
+  const gs = [];
+  for (let i = 0; i < codes.length; i += 100) gs.push(...(await kv.mget(...codes.slice(i, i + 100).map(gkey))));
   return codes.map((c, i) => ({ code: c, g: gs[i] }));
 }
 
@@ -51,6 +53,19 @@ function addMember(g, user, profile) {
   if (pay) g.payInfo[name] = pay;
   g.members = g.members || {};
   g.members[user.sub] = { email: user.email, name, role: g.members[user.sub]?.role || 'member', joinedAt: Date.now() };
+}
+
+// Quét mọi key group:* trong database (gồm cả nhóm tạo từ bản cũ, chưa có trong index).
+async function scanGroupCodes() {
+  const out = [];
+  let cursor = 0;
+  let guard = 0;
+  do {
+    const [next, keys] = await kv.scan(cursor, { match: 'group:*', count: 200 });
+    for (const k of keys) out.push(String(k).slice('group:'.length));
+    cursor = Number(next);
+  } while (cursor !== 0 && ++guard < 200 && out.length < 2000);
+  return out;
 }
 
 export default async function handler(req, res) {
@@ -83,8 +98,9 @@ export default async function handler(req, res) {
 
       const out = { isAdmin: admin, mailConfigured: mailConfigured(), groups, invites };
       if (admin) {
-        const all = (await kv.smembers(INDEX)).map(unCs);
-        out.all = (await loadMany(all)).filter((x) => x.g).map((x) => summary(x.g, user)).sort((a, b) => a.code.localeCompare(b.code));
+        const all = new Set((await kv.smembers(INDEX)).map(unCs));
+        for (const c of await scanGroupCodes()) all.add(c);
+        out.all = (await loadMany([...all])).filter((x) => x.g && typeof x.g === 'object').map((x) => summary(x.g, user, x.code)).sort((a, b) => a.code.localeCompare(b.code));
       }
       return res.status(200).json(out);
     }
@@ -124,10 +140,16 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, code });
     }
 
-    const code = normCode(body.code);
-    if (!code) return bad(res, 'Thiếu hoặc sai mã nhóm');
-    const key = gkey(code);
-    const g = await kv.get(key);
+    const rawCode = String(body.code || '').trim();
+    if (!rawCode) return bad(res, 'Thiếu hoặc sai mã nhóm');
+    let code = normCode(rawCode);
+    let key = code ? gkey(code) : '';
+    let g = key ? await kv.get(key) : null;
+    // Admin mở được cả nhóm cũ có mã không theo chuẩn mới (chữ hoa, có dấu cách...).
+    if (!g && admin) {
+      const g2 = await kv.get(gkey(rawCode));
+      if (g2 && typeof g2 === 'object') { g = g2; code = rawCode; key = gkey(rawCode); }
+    }
     if (!g) return bad(res, 'Nhóm không tồn tại', 404);
 
     // ---------- Đồng ý / từ chối lời mời ----------
