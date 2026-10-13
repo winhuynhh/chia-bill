@@ -192,6 +192,16 @@
     .flt .sel, .flt .inp { min-height: 40px; padding: 6px 10px; width:auto; flex:1; min-width: 130px; font-size: 14px; }
     .flt-info { font-size: 12.5px; color: var(--mute); margin-top: 8px; }
     .danger-zone { border: 1.5px solid var(--neg-t); }
+    .sw { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 0; cursor:pointer; }
+    .sw + .sw { border-top: 1px solid var(--line); }
+    .sw b { display:block; font-size:14.5px; }
+    .sw small { color: var(--mute); font-size: 12.5px; }
+    .sw input { position:absolute; opacity:0; }
+    .sw .track { flex:none; width:48px; height:28px; border-radius:999px; background:#CFCADB; position:relative; transition: background .15s; }
+    .sw .track::after { content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition: transform .15s; }
+    .sw input:checked + .track { background: var(--brand); }
+    .sw input:checked + .track::after { transform: translateX(20px); }
+    .sw input:focus-visible + .track { outline: 3px solid rgba(176,18,95,.45); outline-offset: 2px; }
     .fab { position: fixed; right: max(16px, calc(50% - 364px)); bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 45; height: 56px; padding: 0 22px 0 18px; border-radius: 999px; background: var(--brand); color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 24px rgba(176,18,95,.4); transition: transform .12s, background .15s; }
     .fab:hover { background: var(--brand-d); }
     .fab:active { transform: scale(.96); }
@@ -500,6 +510,13 @@
           </div>
         </div>
 
+        <div class="card" id="permCard" style="display:none;">
+          <div class="card-h">Quyền của thành viên</div>
+          <p class="card-s">Trưởng nhóm luôn thêm, sửa, xóa được. Hai công tắc này áp dụng cho các thành viên còn lại.</p>
+          <label class="sw"><span><b>Cho phép thêm khoản chi</b><small>Thành viên thêm khoản chi và người chia tiền</small></span><input type="checkbox" id="permAdd" onchange="savePerms()"><span class="track"></span></label>
+          <label class="sw"><span><b>Cho phép sửa và xóa giao dịch</b><small>Thành viên chỉnh sửa hoặc xóa giao dịch đã có</small></span><input type="checkbox" id="permEdit" onchange="savePerms()"><span class="track"></span></label>
+        </div>
+
         <div class="card danger-zone" id="dangerZone"></div>
       </section>
     </div>
@@ -540,7 +557,7 @@
           <div id="areaExact" class="hidden"></div>
           <div id="splitHint" class="split-hint"></div>
         </div>
-        <button onclick="addExpense()" class="btn primary block" style="min-height:52px;font-size:15px;"><i class="fa-solid fa-check"></i> Lưu khoản chi</button>
+        <button id="expSave" onclick="addExpense()" class="btn primary block" style="min-height:52px;font-size:15px;"><i class="fa-solid fa-check"></i> Lưu khoản chi</button>
       </div>
     </div>
   </div>
@@ -624,6 +641,7 @@
     let paySaving = false;
     let loadCount = 0;
     let curTab = 'exp';
+    let editingId = '';
     let filt = { mode: 'all', from: '', to: '' };
     // Link mời trong email có dạng /?invite=<mã nhóm>
     let deepLink = '';
@@ -1243,14 +1261,65 @@
 
     const splitMode = () => document.querySelector('input[name="splitMode"]:checked').value;
 
+    function buildSplitAreas() {
+      const users = localData.users;
+      $('areaEqual').innerHTML = users.map(u => `<label><input type="checkbox" class="p-check" value="${esc(u)}" ${isLeft(u) ? '' : 'checked'}><span>${esc(u)}${isLeft(u) ? ' (đã rời)' : ''}</span></label>`).join('');
+      $('areaExact').innerHTML = users.map(u => `<div class="xr"><span>${esc(u)}</span><input type="number" class="inp exact-in" data-user="${esc(u)}" data-manual="false" inputmode="numeric" oninput="handleExactInput(this)"></div>`).join('');
+      recalcExact();
+    }
+
+    // Đưa form về trạng thái "thêm mới".
+    function resetExpForm() {
+      editingId = '';
+      $('expTitle').textContent = 'Thêm khoản chi';
+      $('expSave').innerHTML = '<i class="fa-solid fa-check"></i> Lưu khoản chi';
+      $('expDesc').value = ''; $('expAmount').value = '';
+      document.querySelector('input[name="splitMode"][value="EQUAL"]').checked = true;
+      buildSplitAreas();
+      toggleSplit();
+      onAmtInput();
+    }
+
+    // Mở form sửa một khoản chi đã có.
+    function openEdit(id) {
+      const e = localData.expenses.find(x => x.id === id);
+      if (!e || e.settle) return;
+      if (!canEdit()) { toast('Trưởng nhóm chưa cho phép thành viên sửa giao dịch', 'err'); return; }
+      resetExpForm();
+      editingId = id;
+      $('expTitle').textContent = 'Sửa khoản chi';
+      $('expSave').innerHTML = '<i class="fa-solid fa-check"></i> Lưu thay đổi';
+      $('expDesc').value = e.desc;
+      $('expAmount').value = String(e.amount);
+      if (!Array.from($('expPayer').options).some(o => o.value === e.payer)) {
+        $('expPayer').insertAdjacentHTML('beforeend', `<option value="${esc(e.payer)}">${esc(e.payer)}</option>`);
+      }
+      $('expPayer').value = e.payer;
+      const det = parseSplit(e);
+      const names = Object.keys(det).filter(u => Number(det[u]) > 0);
+      const vals = names.map(u => Number(det[u]));
+      const equal = vals.length > 0 && Math.max(...vals) - Math.min(...vals) <= 1 && Math.abs(vals.reduce((a, b) => a + b, 0) - e.amount) <= 1;
+      if (equal) {
+        document.querySelectorAll('.p-check').forEach(c => { c.checked = names.includes(c.value); });
+      } else {
+        document.querySelector('input[name="splitMode"][value="EXACT"]').checked = true;
+        toggleSplit();
+        document.querySelectorAll('.exact-in').forEach(i => { i.value = Number(det[i.dataset.user]) || 0; i.dataset.manual = 'true'; });
+      }
+      onAmtInput();
+      openOv('expSheet');
+    }
+
     function openExp() {
+      if (editingId) resetExpForm();
+      if (!canAdd()) { toast('Trưởng nhóm chưa cho phép thành viên thêm khoản chi', 'err'); return; }
       if (!localData.users.length) { toast('Nhóm chưa có người chia tiền. Thêm ở tab Thành viên.', 'err'); setTab('people'); return; }
       if (!$('expPayer').value && myMember()) $('expPayer').value = myMember();
       onAmtInput();
       openOv('expSheet');
       setTimeout(() => { try { $('expDesc').focus(); } catch (_) {} }, 60);
     }
-    function closeExp() { closeOv('expSheet'); }
+    function closeExp() { closeOv('expSheet'); if (editingId) resetExpForm(); }
 
     function quickCat(label) {
       $('expDesc').value = label;
@@ -1312,13 +1381,14 @@
         if (Math.abs(sum - a) > 1 && !(await uiConfirm(`Tổng chia (${fmt(sum)}đ) khác số tiền hóa đơn (${fmt(a)}đ). Vẫn lưu?`, { title: 'Tổng chia chưa khớp', ok: 'Vẫn lưu', cancel: 'Sửa lại' }))) return;
       }
 
-      const ok = await mutate({ action: 'addExpense', id: uid(), desc: d, amount: a, payer: p, splitDetails: JSON.stringify(owes) });
+      const wasEdit = !!editingId;
+      const ok = await mutate({ action: wasEdit ? 'editExpense' : 'addExpense', id: wasEdit ? editingId : uid(), desc: d, amount: a, payer: p, splitDetails: JSON.stringify(owes) });
       if (ok) {
-        $('expDesc').value = ""; $('expAmount').value = "";
-        onAmtInput();
+        editingId = '';
+        resetExpForm();
         closeExp();
         setTab('exp');
-        toast('Đã thêm khoản chi');
+        toast(wasEdit ? 'Đã cập nhật khoản chi' : 'Đã thêm khoản chi');
       }
     }
 
@@ -1464,6 +1534,29 @@
       finally { showLoad(false); }
     }
 
+    const canAdd = () => getMeta().canAdd !== false;
+    const canEdit = () => getMeta().canEdit !== false;
+
+    async function savePerms() {
+      const body = { action: 'settings', code: currentG, memberCanAdd: $('permAdd').checked, memberCanEdit: $('permEdit').checked };
+      showLoad(true);
+      try {
+        const r = await api('/api/groups', { method: 'POST', body });
+        localData.meta = { ...getMeta(), settings: r.settings };
+        toast('Đã lưu quyền của thành viên');
+      } catch (e) { fail(e); renderPerms(); }
+      finally { showLoad(false); }
+    }
+
+    function renderPerms() {
+      const m = getMeta();
+      $('permCard').style.display = m.canManage ? 'block' : 'none';
+      const st = m.settings || { memberCanAdd: true, memberCanEdit: false };
+      $('permAdd').checked = !!st.memberCanAdd;
+      $('permEdit').checked = !!st.memberCanEdit;
+      $('fab').style.display = canAdd() ? 'inline-flex' : 'none';
+    }
+
     function renderDanger() {
       const m = getMeta();
       const el = $('dangerZone');
@@ -1514,13 +1607,13 @@
       const { users, expenses } = localData;
       const bills = expenses.filter(e => !e.settle && inFilter(e)).slice().reverse();
       const settles = expenses.filter(e => e.settle && inFilter(e)).slice().reverse();
-      const delRow = (e) => `<div class="foot"><button class="lnk neg" onclick="deleteExpense('${esc(e.id)}')"><i class="fa-regular fa-trash-can"></i> Xóa</button></div>`;
+      const delRow = (e) => !canEdit() ? '' : `<div class="foot" style="gap:18px;">${e.settle ? '' : `<button class="lnk" onclick="openEdit('${esc(e.id)}')"><i class="fa-regular fa-pen-to-square"></i> Sửa</button>`}<button class="lnk neg" onclick="deleteExpense('${esc(e.id)}')"><i class="fa-regular fa-trash-can"></i> Xóa</button></div>`;
 
       let h = '';
       if (!bills.length && !settles.length && expenses.length) {
         h = `<div class="empty card"><b>Không có giao dịch nào khớp bộ lọc</b>Đổi bộ lọc ở trên để xem các giao dịch khác.</div>`;
       } else if (!bills.length && !settles.length) {
-        h = `<div class="empty card"><b>Chưa có khoản chi nào</b>Ghi lại khoản đầu tiên, app sẽ tự tính ai nợ ai.<br><button class="btn primary" onclick="openExp()"><i class="fa-solid fa-plus"></i> Thêm khoản chi đầu tiên</button></div>`;
+        h = `<div class="empty card"><b>Chưa có khoản chi nào</b>Ghi lại khoản đầu tiên, app sẽ tự tính ai nợ ai.${canAdd() ? '<br><button class="btn primary" onclick="openExp()"><i class="fa-solid fa-plus"></i> Thêm khoản chi đầu tiên</button>' : ' Trưởng nhóm chưa cho phép thành viên thêm khoản chi.'}</div>`;
       }
       h += bills.map(e => {
         const det = parseSplit(e);
@@ -1573,7 +1666,7 @@
       const bills = expenses.filter(e => !e.settle && inFilter(e));
       const settles = expenses.filter(e => e.settle && inFilter(e));
       const allSettles = expenses.some(e => e.settle);
-      const delBtn = (e) => `<td class="no-capture"><button onclick="deleteExpense('${esc(e.id)}')" class="ibtn del" aria-label="Xóa khoản chi"><i class="fa-regular fa-trash-can"></i></button></td>`;
+      const delBtn = (e) => `<td class="no-capture">${canEdit() ? `${e.settle ? '' : `<button onclick="openEdit('${esc(e.id)}')" class="ibtn" aria-label="Sửa khoản chi"><i class="fa-regular fa-pen-to-square"></i></button>`}<button onclick="deleteExpense('${esc(e.id)}')" class="ibtn del" aria-label="Xóa khoản chi"><i class="fa-regular fa-trash-can"></i></button>` : ''}</td>`;
 
       let bdy = bills.map(e => {
         const det = parseSplit(e);
@@ -1642,6 +1735,7 @@
       renderMembers();
       renderHero(bal);
       renderDanger();
+      renderPerms();
       renderExpenses();
       renderBalances(bal);
       renderTable(bal);
@@ -1663,9 +1757,7 @@
         $('meSelect').value = mine;
       }
 
-      $('areaEqual').innerHTML = users.map(u => `<label><input type="checkbox" class="p-check" value="${esc(u)}" ${isLeft(u) ? '' : 'checked'}><span>${esc(u)}${isLeft(u) ? ' (đã rời)' : ''}</span></label>`).join('');
-      $('areaExact').innerHTML = users.map(u => `<div class="xr"><span>${esc(u)}</span><input type="number" class="inp exact-in" data-user="${esc(u)}" data-manual="false" inputmode="numeric" oninput="handleExactInput(this)"></div>`).join('');
-      recalcExact();
+      buildSplitAreas();
 
       if (settleOpen) { transfers = sortedTransfers(); renderSettle(); }
     }
