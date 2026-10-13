@@ -15,6 +15,7 @@ Chia tiền nhóm, chạy trên Vercel Serverless + Redis/KV.
 - **Gắn tên nhập tay với tài khoản Google**: khi mời email, trưởng nhóm chọn "Đúng, họ là <tên tạm>"; người đó đồng ý thì các khoản chi cũ tự gắn vào tài khoản của họ. Nếu không chọn, app vẫn tự khớp khi tên Google trùng tên đã nhập (không phân biệt hoa thường, dấu). Người tham gia cũng có thể tự chọn lại tên trong tab Thành viên, mục "Bạn là ai trong nhóm?", để gộp lịch sử.
 - **Sửa giao dịch và quyền thành viên**: ai có quyền thì bấm Sửa ở từng khoản chi (hoặc biểu tượng bút trong tab Bảng). Trưởng nhóm có 2 công tắc trong tab Thành viên: *Cho phép thêm khoản chi* (mặc định bật) và *Cho phép sửa và xóa giao dịch* (mặc định tắt). Trưởng nhóm và admin luôn có đủ quyền. Ghi nhận "Đã trả" khi settle luôn dùng được.
 - **Quay lại sau khi rời**: cùng tài khoản hoặc cùng email thì tự nối lại đúng tên và lịch sử cũ. Nếu quay lại bằng email mới, trưởng nhóm chọn "Đúng, họ là <tên> (đã rời nhóm)" lúc mời, hoặc người đó tự chọn lại tên trong tab Thành viên để gộp.
+- **Xóa người chia tiền**: thành viên rời nhóm mà chưa dính giao dịch nào thì tên cũng được xóa luôn. Nếu đã có giao dịch thì chỉ rời nhóm, thông tin được giữ để quyết toán (không xóa được cho tới khi các giao dịch liên quan bị xóa). Người nhập tay chưa có giao dịch có dấu x để xóa.
 - **Rời nhóm**: thành viên có thể rời. Sau khi rời họ không xem được nhóm, nhưng tên, các khoản chi và tài khoản nhận tiền vẫn được giữ (hiện "đã rời") để cả nhóm quyết toán. Được mời lại sẽ nối đúng lịch sử cũ.
 - **Lọc giao dịch**: tất cả, chưa settle (sau lần settle gần nhất), 7/30 ngày, tháng này hoặc khoảng ngày tùy chọn. Bộ lọc chỉ áp dụng cho danh sách và bảng; số dư và quyết toán luôn tính toàn bộ.
 - **Settle up**: ai chuyển cho ai bao nhiêu (ít giao dịch nhất), kèm thông tin MoMo/ngân hàng của người nhận, nút "Đã trả" để ghi nhận.
@@ -93,4 +94,4 @@ Mọi request (trừ `/api/config`, `/api/auth`) cần header `Authorization: Be
 - `GET /api/groups?preview=<mã>&k=<khóa>` → xem trước nhóm khi vào bằng link
 - `GET /api/groups` → `{ isAdmin, groups, invites, all? }` (`all` chỉ có với admin)
 - `POST /api/groups` với `action`: `create` | `accept` | `decline` | `invite` (`emails`, `asName`) | `cancelInvite` (`email`) | `settings` (`memberCanAdd`, `memberCanEdit`) | `join` (`k`, `asName`) | `joinLink` | `resetJoinLink` | `leave` | `rename` (`newCode`, admin) | `delete` (trưởng nhóm hoặc admin)
-- `GET /api/data?groupId=...`, `POST /api/data` với `action`: `addUser` | `addExpense` | `deleteExpense` | `editExpense` | `setPayInfo` | `linkMe` | `claim`
+- `GET /api/data?groupId=...`, `POST /api/data` với `action`: `addUser` | `addExpense` | `deleteExpense` | `editExpense` | `removeUser` | `setPayInfo` | `linkMe` | `claim`

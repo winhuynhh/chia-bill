@@ -1,7 +1,7 @@
 import { kv } from '@vercel/kv';
 import crypto from 'node:crypto';
 import {
-  requireUser, isAdmin, canManage, groupSettings, normCode, isEmail, cs, unCs, appUrl, profilePay,
+  requireUser, isAdmin, canManage, groupSettings, activeLinked, isInvolved, normCode, isEmail, cs, unCs, appUrl, profilePay,
 } from './_lib.js';
 import { sendInviteMail, mailConfigured, inviteText } from './_mail.js';
 
@@ -44,7 +44,6 @@ async function loadMany(codes) {
 const normName = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
 
 // Tên đang gắn với thành viên còn trong nhóm. Tên của người đã rời được xem là "trống" để người khác nhận lại.
-const activeLinked = (g) => new Set(Object.entries(g.links || {}).filter(([sub]) => g.members?.[sub]).map(([, n]) => n));
 // Người đã rời nhưng đã có người nhận lại tên này: xóa bản ghi rời và liên kết cũ.
 function releaseName(g, name) {
   for (const [sub, x] of Object.entries(g.left || {})) {
@@ -324,12 +323,20 @@ export default async function handler(req, res) {
       const m = g.members?.[user.sub];
       if (!m) return bad(res, 'Bạn không phải thành viên của nhóm này', 403);
       if (m.role === 'owner') return bad(res, 'Trưởng nhóm không thể rời nhóm. Hãy xóa nhóm nếu không dùng nữa.', 400);
-      g.left = g.left || {};
-      g.left[user.sub] = { email: m.email, name: m.name, leftAt: Date.now() };
       delete g.members[user.sub];
+      // Chưa dính giao dịch nào: rời nhóm và xóa luôn thông tin. Đã có giao dịch: chỉ rời, giữ lại tên để quyết toán.
+      const removed = !isInvolved(g, m.name);
+      if (removed) {
+        g.users = (g.users || []).filter((u) => u !== m.name);
+        if (g.payInfo) delete g.payInfo[m.name];
+        if (g.links) delete g.links[user.sub];
+      } else {
+        g.left = g.left || {};
+        g.left[user.sub] = { email: m.email, name: m.name, leftAt: Date.now() };
+      }
       await kv.set(key, g);
       await kv.srem(ukey(user.sub), cs(code));
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ success: true, removed });
     }
 
     // ---------- Xóa nhóm: trưởng nhóm hoặc admin. Đổi mã: chỉ admin ----------

@@ -1,6 +1,6 @@
 import { kv } from '@vercel/kv';
 import crypto from 'node:crypto';
-import { requireUser, isAdmin, sanitizePay, profilePay, normCode, canAccess, groupView, perms } from './_lib.js';
+import { requireUser, isAdmin, sanitizePay, profilePay, normCode, canAccess, groupView, perms, activeLinked, isInvolved } from './_lib.js';
 
 // Dữ liệu nhóm nằm ở key group:<code> (tạo/mời/đổi mã xem api/groups.js).
 // Ở đây chỉ đọc và ghi dữ liệu chia tiền, và chỉ thành viên đã tham gia (hoặc admin) mới truy cập được.
@@ -121,6 +121,21 @@ export default async function handler(req, res) {
         if (!pm.canEdit) return bad(res, 'Trưởng nhóm chưa cho phép thành viên xóa giao dịch', 403);
         const idx = g.expenses.findIndex((e) => e.id === body.id);
         if (idx !== -1) g.expenses.splice(idx, 1);
+        break;
+      }
+
+      // Xóa một người khỏi danh sách chia tiền: chỉ khi chưa dính giao dịch nào và không còn là thành viên đang ở trong nhóm.
+      case 'removeUser': {
+        if (!pm.canEdit) return bad(res, 'Trưởng nhóm chưa cho phép thành viên xóa người', 403);
+        const name = String(body.userName || '');
+        if (!g.users.includes(name)) return bad(res, 'Thành viên không tồn tại');
+        if (activeLinked(g).has(name)) return bad(res, 'Người này đang là thành viên của nhóm. Họ cần rời nhóm trước.');
+        if (isInvolved(g, name)) return bad(res, `"${name}" đã có giao dịch nên không xóa được. Hãy xóa các giao dịch liên quan trước.`);
+        g.users = g.users.filter((u) => u !== name);
+        delete g.payInfo[name];
+        for (const [sub, n] of Object.entries(g.links)) if (n === name) delete g.links[sub];
+        for (const [sub, x] of Object.entries(g.left || {})) if (x.name === name) delete g.left[sub];
+        for (const [em, v] of Object.entries(g.invites || {})) if (v.asName === name) delete g.invites[em].asName;
         break;
       }
 

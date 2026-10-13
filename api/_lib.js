@@ -89,6 +89,20 @@ export function perms(g, user) {
   return { canAdd: manage || (member && s.memberCanAdd), canEdit: manage || (member && s.memberCanEdit) };
 }
 
+// Tên đang gắn với thành viên còn trong nhóm (người đã rời thì tên được xem là trống).
+export const activeLinked = (g) => new Set(Object.entries(g.links || {}).filter(([sub]) => g.members?.[sub]).map(([, n]) => n));
+
+// Người này có dính giao dịch nào không (trả tiền hoặc được chia tiền, kể cả settle).
+export function isInvolved(g, name) {
+  for (const e of g.expenses || []) {
+    if (e.payer === name) return true;
+    let det = {};
+    try { det = JSON.parse(e.splitDetails || '{}') || {}; } catch { det = {}; }
+    if (name in det) return true;
+  }
+  return false;
+}
+
 // Dữ liệu trả cho giao diện (không lộ sub/invite của người khác khi không cần).
 export function groupView(g, user) {
   const admin = isAdmin(user.email);

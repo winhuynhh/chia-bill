@@ -261,7 +261,10 @@
 
     /* Thành viên */
     .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; background: var(--soft); font-weight: 600; font-size: 13.5px; }
+    .chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 4px 0 0; border-radius: 999px; background: var(--soft); font-weight: 600; font-size: 13.5px; }
+    .chip-main { display: inline-flex; align-items: center; gap: 8px; padding: 5px 8px 5px 5px; border-radius: 999px; font-weight: 600; font-size: 13.5px; }
+    .chip-x { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; color: var(--mute); }
+    .chip-x:hover { background: var(--neg-t); color: var(--neg); }
     .chip:hover { background: #E8E3F0; }
     .chip i { color: var(--faint); font-size: 12px; }
     .mem { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
@@ -497,7 +500,7 @@
 
         <div class="card">
           <div class="card-h">Người chia tiền</div>
-          <p class="card-s">Bấm vào một người để nhập hoặc sửa tài khoản nhận tiền của họ.</p>
+          <p class="card-s">Bấm vào một người để nhập hoặc sửa tài khoản nhận tiền của họ. Dấu x chỉ có ở người chưa có giao dịch nào và không còn trong nhóm.</p>
           <div id="userTags" class="chips" style="margin-bottom:14px;"></div>
           <div class="row">
             <input type="text" id="userName" onkeyup="if(event.key === 'Enter') addUser()" class="inp" placeholder="Thêm người chưa dùng app" autocomplete="off">
@@ -1593,8 +1596,25 @@
       $('fltInfo').style.display = t ? 'block' : 'none';
     }
 
+    // Người này có dính giao dịch nào không (trả tiền hoặc được chia tiền).
+    function isInvolved(name) {
+      return localData.expenses.some(e => e.payer === name || name in parseSplit(e));
+    }
+
+    async function removeUserNow(i) {
+      const u = localData.users[i];
+      if (u === undefined) return;
+      if (!(await uiConfirm(`Xóa "${u}" khỏi nhóm? "${u}" chưa có giao dịch nào nên xóa được.`, { title: 'Xóa người chia tiền', ok: 'Xóa', danger: true }))) return;
+      if (await mutate({ action: 'removeUser', userName: u })) toast(`Đã xóa ${u}`);
+    }
+
     async function leaveGroup() {
-      if (!(await uiConfirm('Sau khi rời, bạn không xem được nhóm này nữa. Tên, các khoản chi và tài khoản nhận tiền của bạn vẫn được giữ trong nhóm để cả nhóm quyết toán. Nếu được mời lại, bạn sẽ nối lại đúng lịch sử cũ.', { title: 'Rời nhóm?', ok: 'Rời nhóm', cancel: 'Ở lại', danger: true }))) return;
+      const mine = myMember();
+      const clean = !mine || !isInvolved(mine);
+      const msg = clean
+        ? 'Bạn chưa có giao dịch nào trong nhóm, nên khi rời nhóm, tên của bạn cũng được xóa khỏi danh sách chia tiền. Bạn có thể được mời lại bất cứ lúc nào.'
+        : 'Bạn đã có giao dịch trong nhóm nên chỉ rời nhóm được, không xóa được thông tin của bạn. Tên, các khoản chi và tài khoản nhận tiền vẫn được giữ để cả nhóm quyết toán. Nếu được mời lại, bạn sẽ nối lại đúng lịch sử cũ.';
+      if (!(await uiConfirm(msg, { title: 'Rời nhóm?', ok: 'Rời nhóm', cancel: 'Ở lại', danger: true }))) return;
       showLoad(true);
       try {
         await api('/api/groups', { method: 'POST', body: { action: 'leave', code: currentG } });
@@ -1647,7 +1667,7 @@
       const el = $('dangerZone');
       let h = '';
       if (m.role === 'member') {
-        h = `<div class="card-h">Rời nhóm</div><p class="card-s">Bạn vẫn được giữ tên và các khoản chi trong nhóm để mọi người quyết toán. Hãy settle xong trước khi rời.</p>
+        h = `<div class="card-h">Rời nhóm</div><p class="card-s">${isInvolved(myMember()) ? 'Bạn đã có giao dịch nên khi rời nhóm, tên và các khoản chi của bạn vẫn được giữ để mọi người quyết toán.' : 'Bạn chưa có giao dịch nào nên khi rời nhóm, tên của bạn cũng được xóa khỏi nhóm.'}</p>
           <button class="btn danger" onclick="leaveGroup()"><i class="fa-solid fa-right-from-bracket"></i> Rời nhóm</button>`;
       } else if (m.canManage) {
         h = `<div class="card-h">Xóa nhóm</div><p class="card-s">Xóa vĩnh viễn nhóm và mọi khoản chi. ${m.role === 'owner' ? 'Trưởng nhóm không thể rời nhóm, chỉ có thể xóa.' : ''}</p>
@@ -1830,7 +1850,8 @@
         const p = payOf(u);
         const icon = !p ? '<i class="fa-solid fa-pen"></i>'
           : (p.method === 'bank' ? '<i class="fa-solid fa-building-columns" style="color:var(--info);"></i>' : '<i class="fa-solid fa-mobile-screen" style="color:var(--brand);"></i>');
-        return `<button type="button" onclick="editPay(${i})" title="Bấm để nhập tài khoản nhận tiền" class="chip">${av(u, 'xs')}${lname(u)}${u === mine ? ' (bạn)' : ''}${(!isLeft(u) && !activeLinked().has(u)) ? ' <span class="hint">nhập tay</span>' : ''} ${icon}</button>`;
+        const removable = canEdit() && !activeLinked().has(u) && !isInvolved(u);
+        return `<span class="chip"><button type="button" onclick="editPay(${i})" title="Bấm để nhập tài khoản nhận tiền" class="chip-main">${av(u, 'xs')}${lname(u)}${u === mine ? ' (bạn)' : ''}${(!isLeft(u) && !activeLinked().has(u)) ? ' <span class="hint">nhập tay</span>' : ''} ${icon}</button>${removable ? `<button type="button" class="chip-x" title="Xóa khỏi nhóm" aria-label="Xóa ${esc(u)} khỏi nhóm" onclick="removeUserNow(${i})"><i class="fa-solid fa-xmark"></i></button>` : ''}</span>`;
       }).join('');
 
       $('expPayer').innerHTML = '<option value="">Chọn người trả</option>' + users.filter(u => !isLeft(u)).map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
