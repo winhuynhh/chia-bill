@@ -640,6 +640,20 @@
     </div>
   </div>
 
+  <!-- Xem trước ảnh bảng để lưu / chia sẻ -->
+  <div id="imgSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="imgTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="imgTitle">Ảnh bảng chia tiền</h3><button class="ibtn" onclick="closeImg()" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <p class="sub" style="margin-bottom:12px;">Trên iPhone: bấm <b>Chia sẻ / Lưu ảnh</b> rồi chọn "Lưu hình ảnh", hoặc nhấn giữ vào ảnh. Trên máy tính: bấm <b>Tải xuống</b>.</p>
+      <div style="border:1px solid var(--line);border-radius:14px;overflow:auto;max-height:46vh;background:#fff;"><img id="imgPrev" alt="Ảnh bảng chia tiền" style="display:block;width:100%;height:auto;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+        <button id="imgShare" class="btn primary" style="flex:1;" onclick="shareImg()"><i class="fa-solid fa-share-nodes"></i> Chia sẻ / Lưu ảnh</button>
+        <button class="btn soft" onclick="downloadImg()"><i class="fa-solid fa-download"></i> Tải xuống</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Hộp thoại xác nhận / nhập -->
   <div id="dlg" class="ov" role="alertdialog" aria-modal="true" aria-labelledby="dlgTitle">
     <div class="sheet dlgbox">
@@ -737,7 +751,7 @@
     }
 
     // ---------- Lớp phủ dùng chung ----------
-    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet'];
+    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet', 'imgSheet'];
     function syncLock() { document.body.classList.toggle('lock', OVERLAYS.some((id) => $(id).classList.contains('open'))); }
     function openOv(id, blocking) {
       const el = $(id);
@@ -752,6 +766,7 @@
       else if (id === 'payModal') closePay();
       else if (id === 'settleModal') closeSettle();
       else if (id === 'joinSheet') closeJoin();
+      else if (id === 'imgSheet') closeImg();
       else closeExp();
     }));
     document.addEventListener('keydown', (ev) => {
@@ -761,7 +776,7 @@
         const el = $(id);
         if (!el.classList.contains('open')) continue;
         if (id === 'dlg') dlgClose(null);
-        else if (!el.dataset.block) { if (id === 'payModal') closePay(); else if (id === 'settleModal') closeSettle(); else if (id === 'joinSheet') closeJoin(); else closeExp(); }
+        else if (!el.dataset.block) { if (id === 'payModal') closePay(); else if (id === 'settleModal') closeSettle(); else if (id === 'joinSheet') closeJoin(); else if (id === 'imgSheet') closeImg(); else closeExp(); }
         return;
       }
     });
@@ -1975,6 +1990,52 @@
     }
 
     // ---------- Xuất ảnh ----------
+    // Hiện ảnh trong một khung xem trước để người dùng chọn Chia sẻ / Lưu hoặc Tải xuống.
+    // (Trình duyệt trên điện thoại thường chặn tải tự động nên trước đây bấm xong không thấy ảnh đâu.)
+    let imgBlob = null;
+    let imgUrl = '';
+    const imgName = () => `Bill_${currentG}_${new Date().toISOString().slice(0, 10)}.jpg`;
+
+    function showImg(blob) {
+      if (imgUrl) { try { URL.revokeObjectURL(imgUrl); } catch (_) {} }
+      imgBlob = blob;
+      imgUrl = URL.createObjectURL(blob);
+      $('imgPrev').src = imgUrl;
+      openOv('imgSheet');
+    }
+
+    function closeImg() {
+      closeOv('imgSheet');
+      $('imgPrev').removeAttribute('src');
+      if (imgUrl) { try { URL.revokeObjectURL(imgUrl); } catch (_) {} imgUrl = ''; }
+      imgBlob = null;
+    }
+
+    async function shareImg() {
+      if (!imgBlob) return;
+      try {
+        const file = new File([imgBlob], imgName(), { type: 'image/jpeg' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: `Chia tiền nhóm ${currentG.toUpperCase()}` });
+          return;
+        }
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+      }
+      toast('Thiết bị này chưa hỗ trợ chia sẻ. Hãy nhấn giữ vào ảnh để lưu, hoặc bấm Tải xuống.', 'err');
+    }
+
+    function downloadImg() {
+      if (!imgUrl) return;
+      const a = document.createElement('a');
+      a.href = imgUrl;
+      a.download = imgName();
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast('Đang tải ảnh xuống. Nếu không thấy, hãy dùng Chia sẻ / Lưu ảnh hoặc nhấn giữ vào ảnh.');
+    }
+
     async function downloadTable() {
       if (typeof html2canvas === 'undefined') { toast('Chưa tải được công cụ xuất ảnh. Kiểm tra mạng rồi thử lại.', 'err'); return; }
       const prevTab = curTab;
@@ -2000,11 +2061,9 @@
           scale: 2, useCORS: true, backgroundColor: "#ffffff",
           windowWidth: mainTable.scrollWidth + 400
         });
-        const link = document.createElement('a');
-        link.download = `Bill_${currentG}_${new Date().getTime()}.jpg`;
-        link.href = canvas.toDataURL("image/jpeg", 0.9);
-        link.click();
-        toast('Đã lưu ảnh bảng');
+        const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.92));
+        if (!blob) throw new Error('no blob');
+        showImg(blob);
       } catch (e) { toast('Không xuất được ảnh, thử lại sau', 'err'); }
       finally {
         stickyCols.forEach(col => col.classList.remove('no-sticky'));
