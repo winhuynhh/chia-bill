@@ -1,4 +1,4 @@
-# Billing Master v3 (Vercel)
+# Billing Master v3.1 (Vercel)
 
 Chia tiền nhóm, chạy trên Vercel Serverless + Redis/KV.
 
@@ -11,13 +11,17 @@ Chia tiền nhóm, chạy trên Vercel Serverless + Redis/KV.
   - Người được mời đăng nhập Google bằng đúng email đó, thấy mục **Lời mời**, bấm **Đồng ý** mới được tính là thành viên (hoặc **Từ chối**).
   - Mỗi người chỉ thấy các nhóm mình **đã tham gia** và các **lời mời đang chờ**.
 - **Admin** (`nghiahnt.dn@gmail.com`): thấy **tất cả nhóm**, mở và chỉnh sửa mọi nhóm, **đổi mã nhóm**, **xóa nhóm**.
+- **Rời nhóm**: thành viên có thể rời. Sau khi rời họ không xem được nhóm, nhưng tên, các khoản chi và tài khoản nhận tiền vẫn được giữ (hiện "đã rời") để cả nhóm quyết toán. Được mời lại sẽ nối đúng lịch sử cũ.
+- **Lọc giao dịch**: tất cả, chưa settle (sau lần settle gần nhất), 7/30 ngày, tháng này hoặc khoảng ngày tùy chọn. Bộ lọc chỉ áp dụng cho danh sách và bảng; số dư và quyết toán luôn tính toàn bộ.
 - **Settle up**: ai chuyển cho ai bao nhiêu (ít giao dịch nhất), kèm thông tin MoMo/ngân hàng của người nhận, nút "Đã trả" để ghi nhận.
 
 | Việc | Admin | Trưởng nhóm | Thành viên | Người được mời (chưa đồng ý) |
 |---|---|---|---|---|
 | Xem / nhập hóa đơn, Settle up | ✔ | ✔ | ✔ | ✘ |
 | Mời / huỷ lời mời | ✔ | ✔ | ✘ | ✘ |
-| Đổi mã / xóa nhóm | ✔ | ✘ | ✘ | ✘ |
+| Xóa nhóm | ✔ | ✔ | ✘ | ✘ |
+| Đổi mã nhóm | ✔ | ✘ | ✘ | ✘ |
+| Rời nhóm | – | ✘ (chỉ xóa được nhóm) | ✔ | – |
 
 ```
 billing-master/
@@ -83,5 +87,5 @@ Mọi request (trừ `/api/config`, `/api/auth`) cần header `Authorization: Be
 - `POST /api/auth` `{ credential }` → `{ token, user, profile }`
 - `GET /api/profile`, `POST /api/profile` `{ pay }`
 - `GET /api/groups` → `{ isAdmin, groups, invites, all? }` (`all` chỉ có với admin)
-- `POST /api/groups` với `action`: `create` | `accept` | `decline` | `invite` (`emails`) | `cancelInvite` (`email`) | `rename` (`newCode`, admin) | `delete` (admin)
+- `POST /api/groups` với `action`: `create` | `accept` | `decline` | `invite` (`emails`) | `cancelInvite` (`email`) | `leave` | `rename` (`newCode`, admin) | `delete` (trưởng nhóm hoặc admin)
 - `GET /api/data?groupId=...`, `POST /api/data` với `action`: `addUser` | `addExpense` | `deleteExpense` | `setPayInfo` | `linkMe`
