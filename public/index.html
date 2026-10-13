@@ -2,86 +2,541 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Billing Master - Google Style</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#B0125F">
+  <title>Billing Master</title>
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js" crossorigin="anonymous"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lexend:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
-    body, input, select, textarea, button, td, th { font-family: 'Inter', sans-serif; letter-spacing: -0.01em; }
-    h1, h2, h3, h6, .btn-cam { font-family: 'Lexend', sans-serif; }
-    :root { --google-red: #EA4335; --google-red-dark: #D93025; --google-blue: #4285F4; --border-color: #DADCE0; --momo: #A50064; }
-    body { background-color: #F8F9FA; color: #3C4043; }
-    .app-card { background: white; border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; transition: 0.3s; }
-    .app-card:hover { box-shadow: 0 1px 3px rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15); }
-    .btn-cam { background-color: var(--google-red); color: white; border: none; font-weight: 600; border-radius: 24px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-    .btn-cam:hover { background-color: var(--google-red-dark); transform: translateY(-1px); color: white; box-shadow: 0 1px 3px rgba(60,64,67,0.3); }
-    .btn-momo { background-color: var(--momo); color: white; border: none; font-weight: 600; border-radius: 24px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; text-decoration: none; }
-    .btn-momo:hover { background-color: #86004f; color: white; }
-    .btn-soft { background: #F1F3F4; color: #3C4043; border: none; font-weight: 600; border-radius: 24px; padding: 6px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-soft:hover { background: #E8EAED; }
-    .btn-ok { background: #E6F4EA; color: #137333; border: none; font-weight: 700; border-radius: 24px; padding: 6px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-ok:hover { background: #CEEAD6; }
-    .btn-danger-soft { background: #FCE8E6; color: #C5221F; border: none; font-weight: 700; border-radius: 24px; padding: 6px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-danger-soft:hover { background: #F9D2CE; }
-    .tab-pay { border: 1px solid var(--border-color); background: #fff; color: #5F6368; font-weight: 600; border-radius: 24px; padding: 8px 14px; font-size: 12px; flex: 1; }
-    .tab-pay.on { background: var(--momo); border-color: var(--momo); color: #fff; }
-    .row-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid #F1F3F4; border-radius: 16px; margin-bottom: 8px; background: #fff; }
-    .row-item.flash { box-shadow: 0 0 0 3px rgba(165,0,100,.35); }
-    .table-container { border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; background: white; }
-    .table-matrix { font-size: 13px; width: 100%; border-collapse: separate; border-spacing: 0; min-width: 700px; }
-    .table-matrix thead th { background-color: #F8F9FA; color: #5F6368; font-weight: 600; font-size: 11px; padding: 16px 10px; border-bottom: 1px solid var(--border-color); text-transform: uppercase; }
-    .table-matrix td { padding: 14px 10px; border-bottom: 1px solid #F1F3F4; vertical-align: middle; }
-    .sticky-col { position: sticky; left: 0; background: #fff !important; z-index: 10; font-weight: 600; border-right: 1px solid var(--border-color) !important; }
-    .no-sticky { position: static !important; border-right: 1px solid #F1F3F4 !important; }
-    .col-money { font-weight: 700; color: #174EA6; font-size: 14px; }
-    .row-final td { border-top: 2px solid var(--border-color) !important; font-weight: 700; background-color: #F8F9FA !important; }
-    .row-sep td { background: #F8F9FA; color: #80868B; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 8px 10px; }
-    .badge-nhan { background-color: #E6F4EA; color: #137333; padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 11px; white-space: nowrap; }
-    .badge-dong { background-color: #FCE8E6; color: #C5221F; padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 11px; white-space: nowrap; }
-    .badge-xong { background-color: #F1F3F4; color: #5F6368; padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 11px; white-space: nowrap; }
-    .badge-admin { background-color: #E8F0FE; color: #174EA6; padding: 4px 10px; border-radius: 16px; font-weight: 700; font-size: 10px; white-space: nowrap; }
-    #loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; }
-    .btn-delete { color: #5f6368; transition: 0.2s; padding: 5px 10px; border-radius: 50%; }
-    .btn-delete:hover { color: var(--google-red); background: #fce8e6; }
-    #toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: #202124; color: #fff; padding: 10px 18px; border-radius: 24px; font-size: 12px; font-weight: 600; z-index: 10010; display: none; max-width: 90vw; text-align: center; }
+    :root {
+      color-scheme: light;
+      --bg: #F4F2F8; --card: #fff; --ink: #1D1A2B; --mute: #6B6780; --faint: #A09CB2; --line: #E6E2EE; --soft: #F1EEF6;
+      --brand: #B0125F; --brand-d: #8E0D4C; --brand-t: #FCE9F2;
+      --pos: #0E8A5F; --pos-t: #E1F5EC;
+      --neg: #C8372D; --neg-t: #FCEAE8;
+      --info: #3B4BC8; --info-t: #E8EAFC;
+      --r-lg: 22px; --r-md: 14px; --r-sm: 10px;
+      --shadow: 0 1px 2px rgba(29,26,43,.06), 0 6px 20px rgba(29,26,43,.06);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 500 15px/1.5 'Be Vietnam Pro', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body.lock { overflow: hidden; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; border: 0; background: none; padding: 0; }
+    h1, h2, h3, h4, p { margin: 0; }
+    .hidden { display: none !important; }
+    .num { font-variant-numeric: tabular-nums; }
+    :focus-visible { outline: 3px solid rgba(176,18,95,.45); outline-offset: 2px; border-radius: 8px; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+
+    /* ---------- Nút ---------- */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 999px; font-weight: 700; font-size: 14px; white-space: nowrap; transition: background .15s, transform .1s; text-decoration: none; }
+    .btn:active { transform: scale(.97); }
+    .btn.primary { background: var(--brand); color: #fff; }
+    .btn.primary:hover { background: var(--brand-d); }
+    .btn.soft { background: var(--soft); color: var(--ink); }
+    .btn.soft:hover { background: #E8E3F0; }
+    .btn.ok { background: var(--pos-t); color: var(--pos); }
+    .btn.ok:hover { background: #CDEEDF; }
+    .btn.danger { background: var(--neg-t); color: var(--neg); }
+    .btn.sm { min-height: 36px; padding: 0 14px; font-size: 13px; }
+    .btn.block { width: 100%; }
+    .btn[disabled] { opacity: .5; pointer-events: none; }
+    .ibtn { width: 40px; height: 40px; border-radius: 50%; display: inline-grid; place-items: center; color: var(--mute); transition: background .15s, color .15s; flex: none; }
+    .ibtn:hover { background: var(--soft); color: var(--ink); }
+    .ibtn.del:hover { background: var(--neg-t); color: var(--neg); }
+    .lnk { color: var(--brand); font-weight: 700; font-size: 13px; }
+    .lnk:hover { text-decoration: underline; }
+    .lnk.neg { color: var(--neg); }
+
+    /* ---------- Form ---------- */
+    .field { display: block; }
+    .field > span { display: block; font-size: 13px; font-weight: 600; color: var(--mute); margin-bottom: 6px; }
+    .inp, .sel, .ta { width: 100%; min-height: 48px; padding: 10px 14px; border: 1.5px solid var(--line); border-radius: var(--r-md); background: #fff; font-weight: 500; transition: border-color .15s, box-shadow .15s; }
+    .ta { resize: vertical; min-height: 72px; }
+    .inp:focus, .sel:focus, .ta:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(176,18,95,.12); }
+    .inp::placeholder, .ta::placeholder { color: var(--faint); font-weight: 400; }
+    .inp.big { font-size: 26px; font-weight: 800; min-height: 60px; letter-spacing: -.01em; }
+    .row { display: flex; gap: 8px; align-items: stretch; }
+    .row > .inp { flex: 1; min-width: 0; }
+    .stack > * + * { margin-top: 12px; }
+    .hint { font-size: 12.5px; color: var(--mute); }
+    .hint.err { color: var(--neg); }
+
+    /* ---------- Thẻ / huy hiệu / avatar ---------- */
+    .card { background: var(--card); border-radius: var(--r-lg); padding: 18px; box-shadow: var(--shadow); }
+    .card + .card, .card + details, details + .card { margin-top: 14px; }
+    .card-h { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .card-s { font-size: 13px; color: var(--mute); margin-bottom: 14px; }
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .badge.dong { background: var(--neg-t); color: var(--neg); }
+    .badge.nhan { background: var(--pos-t); color: var(--pos); }
+    .badge.xong { background: var(--soft); color: var(--mute); }
+    .badge.admin { background: var(--info-t); color: var(--info); }
+    .av { --h: 300; width: 36px; height: 36px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 13px; font-weight: 700; flex: none; background: hsl(var(--h) 60% 90%); color: hsl(var(--h) 55% 26%); letter-spacing: 0; }
+    .av.sq { border-radius: 12px; width: 44px; height: 44px; font-size: 15px; }
+    .av.xs { width: 28px; height: 28px; font-size: 11px; }
+    .av.lg { width: 44px; height: 44px; font-size: 15px; }
+    .avs { display: flex; }
+    .avs .av { width: 30px; height: 30px; font-size: 11px; border: 2px solid #fff; margin-left: -8px; }
+    .avs .av:first-child { margin-left: 0; }
+    .empty { text-align: center; padding: 28px 12px; color: var(--mute); }
+    .empty b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 4px; }
+    .empty .btn { margin-top: 14px; }
+
+    /* ---------- Thanh trên ---------- */
+    #userBar { position: sticky; top: 0; z-index: 50; background: rgba(244,242,248,.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+    #userBar .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; letter-spacing: -.01em; }
+    .brand i { width: 30px; height: 30px; border-radius: 9px; background: var(--brand); color: #fff; display: grid; place-items: center; font-size: 14px; }
+    .me-btn { display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px 4px 4px; border-radius: 999px; }
+    .me-btn:hover { background: var(--soft); }
+    #userAvatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+    #userInit { font-size: 12px; }
+    .menu-wrap { position: relative; }
+    .menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 250px; background: #fff; border-radius: 18px; box-shadow: 0 12px 40px rgba(29,26,43,.18); padding: 8px; display: none; z-index: 60; }
+    .menu.open { display: block; }
+    .menu-head { padding: 10px 12px 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+    .menu-head b { display: block; font-size: 14px; }
+    .menu-head small { color: var(--mute); font-size: 12.5px; word-break: break-all; }
+    .menu button { width: 100%; text-align: left; padding: 11px 12px; border-radius: 10px; font-weight: 600; font-size: 14px; display: flex; gap: 10px; align-items: center; }
+    .menu button:hover { background: var(--soft); }
+    .menu button i { width: 18px; color: var(--mute); }
+
+    /* ---------- Đăng nhập ---------- */
+    #loginArea { min-height: 100vh; min-height: 100dvh; display: none; align-items: center; padding: 32px 0; }
+    .login-grid { display: grid; gap: 40px; align-items: center; }
+    .login-copy h1 { font-size: clamp(32px, 7vw, 46px); line-height: 1.12; font-weight: 800; letter-spacing: -.025em; margin: 18px 0 14px; }
+    .login-copy p { color: var(--mute); font-size: 16px; max-width: 44ch; margin-bottom: 26px; }
+    #gBtn { min-height: 44px; }
+    #loginErr { color: var(--neg); font-size: 13.5px; font-weight: 600; margin-top: 14px; min-height: 20px; }
+    .login-foot { margin-top: 30px; font-size: 12.5px; color: var(--faint); }
+    .paper-wrap { filter: drop-shadow(0 14px 24px rgba(29,26,43,.14)); transform: rotate(-2deg); max-width: 340px; width: 100%; justify-self: center; }
+    .paper { background: #fff; padding: 22px 22px 34px; -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 16px 100%; mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 16px 100%; }
+    .paper h4 { font-size: 13px; color: var(--mute); font-weight: 600; margin-bottom: 12px; }
+    .paper .ln { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; border-bottom: 1px dashed var(--line); }
+    .paper .ln b { font-weight: 700; }
+    .paper .tot { display: flex; justify-content: space-between; align-items: baseline; padding-top: 14px; font-weight: 800; font-size: 22px; letter-spacing: -.02em; }
+    .paper .tot small { font-size: 13px; color: var(--mute); font-weight: 600; letter-spacing: 0; }
+    .paper .pay { margin-top: 14px; background: var(--brand-t); color: var(--brand-d); border-radius: 12px; padding: 10px 12px; font-size: 13px; font-weight: 700; }
+    @media (min-width: 820px) { .login-grid { grid-template-columns: 1.1fr .9fr; } }
+
+    /* ---------- Trang chủ ---------- */
+    .page { padding: 22px 0 60px; }
+    .greet { margin-bottom: 20px; }
+    .greet h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+    .greet p { color: var(--mute); font-size: 14px; margin-top: 2px; }
+    .sec-t { font-size: 13px; font-weight: 700; color: var(--mute); margin: 26px 0 10px; }
+    .invite { background: var(--brand-t); border-radius: var(--r-lg); padding: 14px; margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; transition: box-shadow .2s; }
+    .invite.flash { box-shadow: 0 0 0 3px var(--brand); }
+    .invite .t b { display: block; font-size: 16px; }
+    .invite .t small { color: var(--brand-d); font-size: 13px; }
+    .invite .act { display: flex; gap: 8px; }
+    .gcard { width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px; background: #fff; border-radius: var(--r-lg); box-shadow: var(--shadow); text-align: left; margin-bottom: 10px; transition: transform .12s; }
+    .gcard:hover { transform: translateY(-1px); }
+    .gcard:active { transform: scale(.99); }
+    .gcard .mid { flex: 1; min-width: 0; }
+    .gcard .mid b { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+    .gcard .mid b span.n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gcard .mid small { color: var(--mute); font-size: 13px; }
+    .gcard > i { color: var(--faint); }
+    .create { display: flex; gap: 8px; }
+    .create .inp { flex: 1; min-width: 0; }
+    .sk { background: linear-gradient(90deg, #ECE8F3 25%, #F5F2FA 50%, #ECE8F3 75%); background-size: 200% 100%; animation: sk 1.2s infinite linear; border-radius: var(--r-lg); height: 74px; margin-bottom: 10px; }
+    @keyframes sk { to { background-position: -200% 0; } }
+    details.adm { background: #fff; border-radius: var(--r-lg); box-shadow: var(--shadow); margin-top: 26px; }
+    details.adm > summary { list-style: none; cursor: pointer; padding: 16px 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--info); }
+    details.adm > summary::-webkit-details-marker { display: none; }
+    details.adm[open] > summary { border-bottom: 1px solid var(--line); }
+    details.adm .tw { padding: 0 6px 6px; overflow-x: auto; }
+    .atable { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 520px; }
+    .atable th { text-align: left; color: var(--mute); font-weight: 600; padding: 12px; }
+    .atable td { padding: 10px 12px; border-top: 1px solid var(--line); }
+    .atable .acts { display: flex; gap: 6px; justify-content: flex-end; }
+
+    /* ---------- Trong nhóm ---------- */
+    #mainApp { padding-bottom: 110px; }
+    .gbar { display: flex; align-items: center; gap: 6px; padding: 12px 0 6px; }
+    .gbar h2 { font-size: 20px; font-weight: 800; letter-spacing: -.015em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gbar .badge { flex: none; }
+    .receipt-wrap { filter: drop-shadow(0 8px 18px rgba(29,26,43,.12)); margin: 8px 0 18px; }
+    .receipt { background: #fff; padding: 20px 20px 34px; -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 16px 100%; mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 16px 100%; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+    .rc-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--mute); font-size: 13px; font-weight: 600; }
+    .rc-total { font-size: 38px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; margin: 4px 0 2px; }
+    .rc-total small { font-size: 16px; color: var(--mute); font-weight: 600; margin-left: 3px; letter-spacing: 0; }
+    .rc-sep { border-top: 2px dashed var(--line); margin: 14px 0; }
+    .rc-st { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .rc-st .what { font-size: 14px; color: var(--mute); }
+    .rc-st .what b { display: block; font-size: 24px; letter-spacing: -.02em; }
+    .rc-st.neg .what b { color: var(--neg); }
+    .rc-st.pos .what b { color: var(--pos); }
+    .rc-st.none .what b { font-size: 16px; color: var(--ink); }
+    .rc-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .tabs { position: sticky; top: 56px; z-index: 40; background: var(--bg); padding: 8px 0 10px; }
+    .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; background: #E9E5F1; border-radius: 999px; padding: 4px; }
+    .seg button { min-height: 38px; border-radius: 999px; font-weight: 700; font-size: 13.5px; color: var(--mute); transition: background .15s, color .15s; white-space: nowrap; padding: 0 6px; }
+    .seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(29,26,43,.15); }
+    .seg.pay button { min-height: 42px; }
+    .seg.pay button.on { color: var(--brand); }
+    .panel { display: none; }
+    .panel.on { display: block; }
+    .fab { position: fixed; right: max(16px, calc(50% - 364px)); bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 45; height: 56px; padding: 0 22px 0 18px; border-radius: 999px; background: var(--brand); color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 24px rgba(176,18,95,.4); transition: transform .12s, background .15s; }
+    .fab:hover { background: var(--brand-d); }
+    .fab:active { transform: scale(.96); }
+
+    /* Danh sách khoản chi */
+    details.ex { background: #fff; border-radius: var(--r-md); box-shadow: var(--shadow); margin-bottom: 8px; }
+    details.ex > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+    details.ex > summary::-webkit-details-marker { display: none; }
+    .ex .mid { flex: 1; min-width: 0; }
+    .ex .mid b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ex .mid small { color: var(--mute); font-size: 12.5px; }
+    .ex .amt { font-weight: 800; font-size: 15px; letter-spacing: -.01em; }
+    .ex-body { padding: 4px 14px 14px 62px; border-top: 1px dashed var(--line); margin: 0 14px; padding-left: 0; padding-top: 10px; }
+    .ex-body .ln { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; color: var(--mute); }
+    .ex-body .ln b { color: var(--ink); }
+    .ex-body .foot { display: flex; justify-content: flex-end; margin-top: 8px; }
+    .ex.settle > summary .av { background: var(--pos-t); color: var(--pos); font-size: 14px; }
+
+    /* Số dư */
+    .bal { display: flex; align-items: center; gap: 12px; padding: 14px; background: #fff; border-radius: var(--r-md); box-shadow: var(--shadow); margin-bottom: 8px; }
+    .bal .mid { flex: 1; min-width: 0; }
+    .bal .mid b { display: block; }
+    .bal .mid small { display: block; color: var(--mute); font-size: 12.5px; }
+    .bal .right { text-align: right; }
+    .bal .right .v { font-weight: 800; font-size: 16px; letter-spacing: -.01em; display: block; margin-top: 2px; }
+    .bal.dong .v { color: var(--neg); }
+    .bal.nhan .v { color: var(--pos); }
+    .bal .pi { font-size: 12.5px; color: var(--mute); margin-top: 2px; }
+
+    /* Bảng */
+    .cap { background: #fff; border-radius: var(--r-lg); padding: 18px; box-shadow: var(--shadow); }
+    .cap-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+    .cap-h h3 { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+    .cap-h p { font-size: 12.5px; color: var(--mute); }
+    .cap-h .cb { font-weight: 800; color: var(--brand); font-size: 13px; }
+    .table-container { border: 1px solid var(--line); border-radius: var(--r-md); overflow-x: auto; background: #fff; }
+    .table-matrix { font-size: 13px; width: 100%; border-collapse: separate; border-spacing: 0; min-width: 640px; text-align: center; }
+    .table-matrix thead th { background: var(--soft); color: var(--mute); font-weight: 700; font-size: 12px; padding: 12px 10px; border-bottom: 1px solid var(--line); }
+    .table-matrix td { padding: 12px 10px; border-bottom: 1px solid var(--soft); vertical-align: middle; }
+    .table-matrix .l { text-align: left; }
+    .sticky-col { position: sticky; left: 0; background: #fff !important; z-index: 5; font-weight: 600; text-align: left; border-right: 1px solid var(--line) !important; }
+    thead .sticky-col { background: var(--soft) !important; }
+    .no-sticky { position: static !important; border-right: 1px solid var(--soft) !important; }
+    .col-money { font-weight: 800; }
+    .row-final td { border-top: 2px solid var(--line) !important; font-weight: 700; background: var(--soft) !important; }
+    .row-sep td { background: var(--soft); color: var(--mute); font-size: 11.5px; font-weight: 700; padding: 8px 10px; text-align: left; }
+    .tf td { background: #FBFAFD; font-weight: 700; }
+    .table-matrix .badge { font-size: 11.5px; }
+    .tm { color: var(--faint); }
+    .pos-t { color: var(--pos); }
+    .neg-t { color: var(--neg); }
+    .cap-actions { margin-top: 14px; display: flex; justify-content: flex-end; }
+
+    /* Thành viên */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; background: var(--soft); font-weight: 600; font-size: 13.5px; }
+    .chip:hover { background: #E8E3F0; }
+    .chip i { color: var(--faint); font-size: 12px; }
+    .mem { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+    .mem + .mem { border-top: 1px solid var(--line); }
+    .mem .mid { flex: 1; min-width: 0; }
+    .mem .mid b { display: block; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mem .mid small { color: var(--mute); font-size: 12.5px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .paybox { background: var(--soft); border-radius: var(--r-md); padding: 12px 14px; }
+    .paybox small { color: var(--mute); font-size: 12.5px; display: block; }
+    .paybox b { word-break: break-word; }
+    .sub-t { font-size: 13px; font-weight: 700; color: var(--mute); margin: 16px 0 8px; }
+    .inv-res { background: var(--soft); border-radius: var(--r-md); padding: 12px 14px; font-size: 13px; }
+    .inv-res .ok { color: var(--pos); }
+    .inv-res .bad { color: var(--neg); }
+    .pend { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: 14px; }
+
+    /* ---------- Lớp phủ / sheet ---------- */
+    .ov { position: fixed; inset: 0; z-index: 100; background: rgba(29,26,43,.5); display: none; align-items: flex-end; justify-content: center; }
+    .ov.open { display: flex; }
+    #dlg { z-index: 200; align-items: center; padding: 16px; }
+    .sheet { background: #fff; width: 100%; max-width: 520px; max-height: 92vh; max-height: 92dvh; overflow-y: auto; border-radius: 26px 26px 0 0; padding: 12px 20px calc(22px + env(safe-area-inset-bottom)); animation: up .22s ease-out; overscroll-behavior: contain; }
+    .sheet.dlgbox { border-radius: 22px; max-width: 400px; padding: 22px; }
+    .sheet .grab { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 0 auto 12px; }
+    .sheet-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+    .sheet-h h3 { font-size: 19px; font-weight: 800; letter-spacing: -.015em; }
+    .sheet .sub { color: var(--mute); font-size: 13.5px; margin-bottom: 16px; }
+    @keyframes up { from { transform: translateY(28px); opacity: .4; } to { transform: none; opacity: 1; } }
+    @media (min-width: 640px) { .ov { align-items: center; padding: 16px; } .sheet { border-radius: 26px; padding-top: 22px; } .sheet .grab { display: none; } }
+
+    .chipset { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .cat { padding: 6px 12px; border-radius: 999px; background: var(--soft); font-size: 13px; font-weight: 600; }
+    .cat:hover { background: var(--brand-t); color: var(--brand-d); }
+    .amt-prev { font-size: 13px; color: var(--brand); font-weight: 700; min-height: 20px; margin-top: 6px; }
+    .split-box { background: var(--soft); border-radius: var(--r-md); padding: 12px; }
+    .split-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .mini-seg { display: inline-grid; grid-auto-flow: column; background: #E3DEEC; border-radius: 999px; padding: 3px; }
+    .mini-seg label { position: relative; }
+    .mini-seg input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+    .mini-seg span { display: block; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--mute); }
+    .mini-seg input:checked + span { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(29,26,43,.15); }
+    .mini-seg input:focus-visible + span { outline: 3px solid rgba(176,18,95,.45); }
+    #areaEqual { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-height: 190px; overflow-y: auto; }
+    #areaEqual label { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 12px; padding: 9px 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; min-width: 0; }
+    #areaEqual label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #areaEqual input { accent-color: var(--brand); width: 18px; height: 18px; flex: none; }
+    #areaExact { display: grid; gap: 6px; max-height: 220px; overflow-y: auto; }
+    #areaExact .xr { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 12px; padding: 4px 4px 4px 12px; }
+    #areaExact .xr span { flex: 1; font-size: 13.5px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #areaExact .inp { width: 130px; min-height: 40px; text-align: right; font-weight: 700; border-radius: 10px; }
+    .split-hint { font-size: 13px; color: var(--mute); margin-top: 10px; font-weight: 600; }
+    .split-hint.err { color: var(--neg); }
+    .tcard { border: 1.5px solid var(--line); border-radius: var(--r-md); padding: 14px; margin-bottom: 10px; }
+    .tcard.me { border-color: var(--brand); background: #FFFAFD; }
+    .t-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .t-who { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14.5px; min-width: 0; flex-wrap: wrap; }
+    .t-who i { color: var(--faint); font-size: 12px; }
+    .t-amt { font-weight: 800; font-size: 18px; letter-spacing: -.01em; }
+    .t-recv { margin-top: 10px; font-size: 13.5px; color: var(--mute); }
+    .t-recv b { color: var(--ink); }
+    .t-act { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .t-tag { margin-top: 8px; }
+    .momo { background: #A50064; color: #fff; }
+    .momo:hover { background: #86004f; }
+    .done { text-align: center; padding: 28px 8px; }
+    .done i { font-size: 44px; color: var(--pos); margin-bottom: 12px; }
+    .done b { display: block; font-size: 16px; }
+
+    #loading { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 400; display: none; overflow: hidden; background: rgba(176,18,95,.15); }
+    #loading::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; background: var(--brand); animation: bar 1s infinite ease-in-out; }
+    @keyframes bar { 0% { left: -40%; } 100% { left: 100%; } }
+    #toast { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translate(-50%, 12px); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 14px; font-size: 14px; font-weight: 600; z-index: 300; max-width: min(92vw, 420px); text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+    #toast.show { opacity: 1; transform: translate(-50%, 0); }
+    #toast.err { background: var(--neg); }
+
+    @media (max-width: 380px) { .rc-total { font-size: 32px; } #areaEqual { grid-template-columns: 1fr; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
 </head>
-<body class="p-3">
+<body>
 
-  <div id="loading">
-    <div class="spinner-border text-primary" role="status"></div>
-    <p class="mt-3 font-semibold text-stone-600 uppercase text-xs">Đang đồng bộ dữ liệu...</p>
+  <div id="loading" role="progressbar" aria-label="Đang tải"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Thanh trên -->
+  <header id="userBar" style="display:none;">
+    <div class="wrap">
+      <button class="brand" onclick="goHome()" aria-label="Về danh sách nhóm"><i class="fa-solid fa-receipt"></i> Billing Master</button>
+      <div class="menu-wrap">
+        <button class="me-btn" onclick="toggleMenu(event)" aria-haspopup="true" aria-label="Tài khoản">
+          <img id="userAvatar" alt="" referrerpolicy="no-referrer" style="display:none;">
+          <span id="userInit" class="av" style="display:none;"></span>
+          <span id="adminBadge" class="badge admin" style="display:none;">Admin</span>
+          <i class="fa-solid fa-chevron-down" style="font-size:11px;color:var(--faint);"></i>
+        </button>
+        <div id="userMenu" class="menu" role="menu">
+          <div class="menu-head"><b id="userNameLbl"></b><small id="userEmailLbl"></small></div>
+          <button onclick="closeMenu(); openPay('me')"><i class="fa-solid fa-wallet"></i> Tài khoản nhận tiền</button>
+          <button onclick="closeMenu(); goHome()"><i class="fa-solid fa-layer-group"></i> Nhóm của tôi</button>
+          <button onclick="closeMenu(); doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Màn 1: đăng nhập -->
+  <main id="loginArea">
+    <div class="wrap">
+      <div class="login-grid">
+        <div class="login-copy">
+          <span class="brand"><i class="fa-solid fa-receipt"></i> Billing Master</span>
+          <h1>Chia tiền nhóm xong trong một lần chạm.</h1>
+          <p>Ghi từng khoản chi, app tính ai chuyển cho ai, kèm sẵn MoMo hoặc số tài khoản của người nhận.</p>
+          <div id="gBtn"></div>
+          <p id="loginErr" role="alert"></p>
+          <p class="login-foot">Đăng nhập bằng Google. Không cần tạo mật khẩu mới.</p>
+        </div>
+        <div class="paper-wrap" aria-hidden="true">
+          <div class="paper">
+            <h4>Đà Lạt cuối tuần</h4>
+            <div class="ln"><span>Lẩu nướng</span><b class="num">1.200.000</b></div>
+            <div class="ln"><span>Grab sân bay</span><b class="num">180.000</b></div>
+            <div class="ln"><span>Cà phê view đồi</span><b class="num">240.000</b></div>
+            <div class="tot"><small>Tổng, 4 người</small><span class="num">1.620.000</span></div>
+            <div class="pay">Minh chuyển cho Lan 405.000đ qua MoMo</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Màn 2: nhóm của tôi -->
+  <main id="groupArea" style="display:none;">
+    <div class="wrap page">
+      <div class="greet">
+        <h1 id="greetHi">Nhóm của tôi</h1>
+        <p>Bạn chỉ thấy các nhóm mình đã tham gia hoặc được mời qua email.</p>
+      </div>
+
+      <div id="inviteBox"></div>
+
+      <h2 class="sec-t">Nhóm đã tham gia</h2>
+      <div id="myGroups"></div>
+
+      <div class="card" style="margin-top:18px;">
+        <div class="card-h">Tạo nhóm mới</div>
+        <p class="card-s">Bạn sẽ là trưởng nhóm. Sau đó mời bạn bè bằng email.</p>
+        <div class="create">
+          <input type="text" id="newGroupCode" onkeyup="if(event.key === 'Enter') createGroup()" class="inp" placeholder="Mã nhóm, vd: di-da-lat" autocapitalize="none" autocomplete="off">
+          <button onclick="createGroup()" class="btn primary"><i class="fa-solid fa-plus"></i> Tạo</button>
+        </div>
+      </div>
+
+      <div id="adminBox"></div>
+    </div>
+  </main>
+
+  <!-- Màn 3: trong nhóm -->
+  <main id="mainApp" style="display:none;">
+    <div class="wrap">
+      <div class="gbar">
+        <button class="ibtn" onclick="exitGroup()" title="Về danh sách nhóm" aria-label="Về danh sách nhóm"><i class="fa-solid fa-arrow-left"></i></button>
+        <h2 id="displayGroupId"></h2>
+        <span id="roleBadge" class="badge xong"></span>
+        <button class="ibtn" onclick="loadGroup()" title="Làm mới" aria-label="Làm mới"><i class="fa-solid fa-rotate"></i></button>
+      </div>
+
+      <div class="receipt-wrap"><div class="receipt" id="hero"></div></div>
+
+      <div class="tabs">
+        <div class="seg" id="tabsBar" role="tablist">
+          <button id="tb-exp" class="on" onclick="setTab('exp')" role="tab">Khoản chi</button>
+          <button id="tb-bal" onclick="setTab('bal')" role="tab">Số dư</button>
+          <button id="tb-table" onclick="setTab('table')" role="tab">Bảng</button>
+          <button id="tb-people" onclick="setTab('people')" role="tab">Thành viên</button>
+        </div>
+      </div>
+
+      <section id="pn-exp" class="panel on"><div id="expList"></div></section>
+
+      <section id="pn-bal" class="panel"><div id="balList"></div></section>
+
+      <section id="pn-table" class="panel">
+        <div id="captureArea" class="cap">
+          <div class="cap-h">
+            <div><h3 id="capTitle"></h3><p id="capDate"></p></div>
+            <span class="cb">Billing Master</span>
+          </div>
+          <div class="table-container" id="tContainer">
+            <table class="table-matrix" id="mainTable">
+              <thead id="tableHead"></thead>
+              <tbody id="tableBody"></tbody>
+              <tfoot id="tableFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+        <div class="cap-actions"><button onclick="downloadTable()" class="btn soft"><i class="fa-solid fa-image"></i> Lưu ảnh bảng (JPG)</button></div>
+      </section>
+
+      <section id="pn-people" class="panel">
+        <div class="card">
+          <div class="card-h">Bạn là ai trong nhóm?</div>
+          <p class="card-s">Chọn tên của bạn để app báo số tiền bạn cần đóng hoặc sẽ nhận.</p>
+          <div class="stack">
+            <select id="meSelect" onchange="linkMeNow()" class="sel"></select>
+            <div class="paybox"><small>Tài khoản nhận tiền của bạn</small><b id="myPayText"></b></div>
+            <button onclick="openPay('me')" class="btn soft block"><i class="fa-solid fa-pen"></i> Sửa tài khoản nhận tiền</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">Người chia tiền</div>
+          <p class="card-s">Bấm vào một người để nhập hoặc sửa tài khoản nhận tiền của họ.</p>
+          <div id="userTags" class="chips" style="margin-bottom:14px;"></div>
+          <div class="row">
+            <input type="text" id="userName" onkeyup="if(event.key === 'Enter') addUser()" class="inp" placeholder="Thêm người chưa dùng app" autocomplete="off">
+            <button onclick="addUser()" class="btn soft" aria-label="Thêm người"><i class="fa-solid fa-plus"></i> Thêm</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">Tài khoản trong nhóm</div>
+          <div id="memberList"></div>
+          <div id="inviteForm">
+            <div class="sub-t">Mời thêm bằng email</div>
+            <textarea id="inviteEmails" rows="2" class="ta" placeholder="Nhập email, cách nhau bằng dấu phẩy (tối đa 10)"></textarea>
+            <button onclick="sendInvites()" class="btn primary block" style="margin-top:10px;"><i class="fa-solid fa-paper-plane"></i> Gửi lời mời</button>
+            <div id="inviteResult" style="margin-top:12px;"></div>
+            <div id="pendingInvites" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <button class="fab" id="fab" onclick="openExp()"><i class="fa-solid fa-plus"></i> Thêm khoản chi</button>
+  </main>
+
+  <!-- Thêm khoản chi -->
+  <div id="expSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="expTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="expTitle">Thêm khoản chi</h3><button class="ibtn" onclick="closeExp()" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="stack" style="margin-top:12px;">
+        <div>
+          <label class="field"><span>Chi cho việc gì?</span><input type="text" id="expDesc" class="inp" placeholder="vd: Ăn tối" autocomplete="off"></label>
+          <div class="chipset">
+            <button type="button" class="cat" onclick="quickCat('Ăn uống')">Ăn uống</button>
+            <button type="button" class="cat" onclick="quickCat('Cà phê')">Cà phê</button>
+            <button type="button" class="cat" onclick="quickCat('Đi lại')">Đi lại</button>
+            <button type="button" class="cat" onclick="quickCat('Chỗ ở')">Chỗ ở</button>
+            <button type="button" class="cat" onclick="quickCat('Mua sắm')">Mua sắm</button>
+          </div>
+        </div>
+        <div>
+          <label class="field"><span>Số tiền (đ)</span><input type="text" id="expAmount" class="inp big num" inputmode="decimal" placeholder="150000 hoặc 150k" oninput="onAmtInput()" autocomplete="off"></label>
+          <div id="amtPreview" class="amt-prev"></div>
+        </div>
+        <label class="field"><span>Ai trả?</span><select id="expPayer" class="sel"></select></label>
+        <div class="split-box">
+          <div class="split-top">
+            <span class="hint" style="font-weight:700;">Chia cho</span>
+            <div class="mini-seg">
+              <label><input type="radio" name="splitMode" value="EQUAL" checked onchange="toggleSplit()"><span>Đều</span></label>
+              <label><input type="radio" name="splitMode" value="EXACT" onchange="toggleSplit()"><span>Tùy chỉnh</span></label>
+            </div>
+          </div>
+          <div id="areaEqual" onchange="updateSplitHint()"></div>
+          <div id="areaExact" class="hidden"></div>
+          <div id="splitHint" class="split-hint"></div>
+        </div>
+        <button onclick="addExpense()" class="btn primary block" style="min-height:52px;font-size:15px;"><i class="fa-solid fa-check"></i> Lưu khoản chi</button>
+      </div>
+    </div>
   </div>
-  <div id="toast"></div>
 
-  <!-- Đăng ký / sửa tài khoản nhận tiền -->
-  <div id="payModal" class="fixed inset-0 hidden items-center justify-center p-3" style="background: rgba(32,33,36,.6); z-index: 10002;">
-    <div class="bg-white rounded-3xl w-full shadow-2xl p-5" style="max-width: 480px; max-height: 92vh; overflow-y: auto;">
-      <div class="flex justify-between items-center mb-1">
-        <h3 id="payTitle" class="text-lg font-bold text-stone-800"></h3>
-        <button id="payClose" onclick="closePay()" class="btn-delete" title="Đóng"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <p id="payHint" class="text-[11px] text-stone-500 mb-4"></p>
+  <!-- Tài khoản nhận tiền -->
+  <div id="payModal" class="ov" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="payTitle"></h3><button id="payClose" class="ibtn" onclick="closePay()" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <p id="payHint" class="sub"></p>
 
-      <div class="flex gap-2 mb-3">
-        <button type="button" id="tabMomo" class="tab-pay" onclick="setPayMethod('momo')"><i class="fa-solid fa-mobile-screen me-1"></i> MoMo</button>
-        <button type="button" id="tabBank" class="tab-pay" onclick="setPayMethod('bank')"><i class="fa-solid fa-building-columns me-1"></i> Ngân hàng</button>
+      <div class="seg pay" style="margin-bottom:14px;">
+        <button type="button" id="tabMomo" onclick="setPayMethod('momo')"><i class="fa-solid fa-mobile-screen"></i> MoMo</button>
+        <button type="button" id="tabBank" onclick="setPayMethod('bank')"><i class="fa-solid fa-building-columns"></i> Ngân hàng</button>
       </div>
 
-      <div id="payMomo" class="space-y-3">
-        <input type="tel" id="payPhone" inputmode="tel" class="form-control" placeholder="SĐT MoMo (vd: 0912345678)">
-        <input type="text" id="payAccName" class="form-control" placeholder="Tên hiển thị trên MoMo (không bắt buộc)">
+      <div id="payMomo" class="stack">
+        <label class="field"><span>Số điện thoại MoMo</span><input type="tel" id="payPhone" inputmode="tel" class="inp" placeholder="0912345678"></label>
+        <label class="field"><span>Tên hiển thị trên MoMo (không bắt buộc)</span><input type="text" id="payAccName" class="inp" placeholder="vd: Nguyễn Văn A"></label>
       </div>
-      <div id="payBank" class="space-y-3 hidden">
-        <input type="text" id="payBankName" list="bankList" class="form-control" placeholder="Ngân hàng (vd: Vietcombank)">
-        <input type="text" id="payBankAcc" inputmode="numeric" class="form-control" placeholder="Số tài khoản">
-        <input type="text" id="payBankHolder" class="form-control" placeholder="Tên chủ tài khoản (vd: NGUYEN VAN A)">
+      <div id="payBank" class="stack hidden">
+        <label class="field"><span>Ngân hàng</span><input type="text" id="payBankName" list="bankList" class="inp" placeholder="vd: Vietcombank"></label>
+        <label class="field"><span>Số tài khoản</span><input type="text" id="payBankAcc" inputmode="numeric" class="inp" placeholder="Chỉ nhập số"></label>
+        <label class="field"><span>Tên chủ tài khoản</span><input type="text" id="payBankHolder" class="inp" placeholder="NGUYEN VAN A"></label>
         <datalist id="bankList">
           <option value="Vietcombank"><option value="VietinBank"><option value="BIDV"><option value="Agribank">
           <option value="Techcombank"><option value="MB Bank"><option value="ACB"><option value="VPBank">
@@ -92,164 +547,32 @@
         </datalist>
       </div>
 
-      <div class="flex flex-wrap gap-2 mt-4">
-        <button id="paySave" onclick="submitPay()" class="btn btn-cam flex-1 py-2 text-sm">Lưu <i class="fa-solid fa-check ms-1"></i></button>
-        <button id="payDelete" onclick="deletePay()" class="btn-soft hidden">Xóa thông tin</button>
-        <button id="payLogout" onclick="doLogout()" class="btn-soft hidden">Đăng xuất</button>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;">
+        <button id="paySave" onclick="submitPay()" class="btn primary" style="flex:1;min-height:50px;"><i class="fa-solid fa-check"></i> Lưu</button>
+        <button id="payDelete" onclick="deletePay()" class="btn danger hidden">Xóa thông tin</button>
+        <button id="payLogout" onclick="doLogout()" class="btn soft hidden">Đăng xuất</button>
       </div>
     </div>
   </div>
 
   <!-- Settle up -->
-  <div id="settleModal" class="fixed inset-0 hidden items-center justify-center p-3" style="background: rgba(32,33,36,.55); z-index: 10000;">
-    <div class="bg-white rounded-3xl w-full shadow-2xl p-5" style="max-width: 560px; max-height: 90vh; overflow-y: auto;">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-bold text-stone-800 flex items-center gap-2"><i class="fa-solid fa-handshake" style="color: var(--momo);"></i> Settle up</h3>
-        <button onclick="closeSettle()" class="btn-delete" title="Đóng"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div id="settleBody"></div>
+  <div id="settleModal" class="ov" role="dialog" aria-modal="true" aria-labelledby="settleTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="settleTitle">Settle up</h3><button class="ibtn" onclick="closeSettle()" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <div id="settleBody" style="margin-top:12px;"></div>
     </div>
   </div>
 
-  <div class="max-w-7xl mx-auto">
-    <!-- Thanh tài khoản -->
-    <div id="userBar" class="items-center justify-end flex-wrap gap-2 mb-3" style="display:none;">
-      <img id="userAvatar" alt="" referrerpolicy="no-referrer" class="rounded-full border" style="width:28px;height:28px;object-fit:cover;">
-      <span id="userNameLbl" class="text-xs font-semibold text-stone-600"></span>
-      <span id="adminBadge" class="badge-admin" style="display:none;">ADMIN</span>
-      <button onclick="openPay('me')" class="btn btn-outline-secondary btn-sm rounded-pill border-0 font-semibold"><i class="fa-solid fa-wallet"></i> Tài khoản nhận tiền</button>
-      <button onclick="doLogout()" class="btn btn-outline-secondary btn-sm rounded-pill border-0 font-semibold"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
-    </div>
-
-    <!-- Màn 1: đăng nhập Google -->
-    <div id="loginArea" class="text-center py-20">
-      <div class="mb-4"><i class="fa-solid fa-file-invoice-dollar fa-4x" style="color: var(--google-blue);"></i></div>
-      <h1 class="text-4xl font-extrabold text-stone-800 mb-2">Billing Master</h1>
-      <p class="text-stone-500 mb-10 text-sm">Hệ thống quản lý bởi nghia.huynh • version 2026</p>
-      <div id="gBtn" class="flex justify-center"></div>
-      <p id="loginErr" class="text-danger text-sm mt-4"></p>
-    </div>
-
-    <!-- Màn 2: nhóm của tôi -->
-    <div id="groupArea" style="display:none;">
-      <div class="max-w-3xl mx-auto py-4">
-        <div class="text-center mb-6">
-          <i class="fa-solid fa-file-invoice-dollar fa-3x" style="color: var(--google-blue);"></i>
-          <h1 class="text-3xl font-extrabold text-stone-800 mt-3 mb-1">Nhóm của tôi</h1>
-          <p class="text-stone-500 text-sm mb-0">Bạn chỉ thấy các nhóm mình đã tham gia hoặc được mời qua email.</p>
-        </div>
-
-        <div id="inviteBox"></div>
-
-        <div class="app-card border mb-4">
-          <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Nhóm đã tham gia</h6>
-          <div id="myGroups"></div>
-        </div>
-
-        <div class="app-card border mb-4">
-          <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Tạo nhóm mới</h6>
-          <div class="flex gap-2">
-            <input type="text" id="newGroupCode" onkeyup="if(event.key === 'Enter') createGroup()" class="form-control font-semibold" placeholder="Đặt mã nhóm (vd: di-da-lat)">
-            <button onclick="createGroup()" class="btn btn-cam px-4 text-sm whitespace-nowrap"><i class="fa-solid fa-plus"></i> Tạo</button>
-          </div>
-          <p class="text-[10px] text-stone-400 mt-2 mb-0">Bạn sẽ tự động là trưởng nhóm và thành viên của nhóm. Sau đó mời người khác bằng email.</p>
-        </div>
-
-        <div id="adminBox"></div>
-      </div>
-    </div>
-
-    <!-- Màn 3: app -->
-    <div id="mainApp" style="display:none;">
-      <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <h2 class="text-2xl font-bold text-stone-800 flex items-center flex-wrap gap-3">
-          <i class="fa-solid fa-folder-open" style="color: #FBBC04;"></i> <span id="displayGroupId"></span>
-          <span id="roleBadge" class="badge-xong"></span>
-        </h2>
-        <div class="flex flex-wrap justify-center gap-2">
-          <button onclick="loadGroup()" class="btn btn-light border font-semibold btn-sm rounded-pill px-4"><i class="fa-solid fa-rotate"></i> Làm mới</button>
-          <button onclick="openSettle()" class="btn btn-cam btn-sm px-4" style="background: var(--momo);"><i class="fa-solid fa-handshake"></i> SETTLE UP</button>
-          <button onclick="downloadTable()" class="btn btn-dark font-semibold btn-sm rounded-pill px-4"><i class="fa-solid fa-camera me-2"></i> LƯU ẢNH (JPG)</button>
-          <button onclick="exitGroup()" class="btn btn-outline-danger font-semibold btn-sm rounded-pill border-0 px-4"><i class="fa-solid fa-arrow-left"></i> Về danh sách nhóm</button>
-        </div>
-      </div>
-
-      <div class="row g-4">
-        <div class="col-lg-4 space-y-4">
-          <div class="app-card border">
-            <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Người chia tiền</h6>
-            <div class="flex gap-2 mb-3">
-              <input type="text" id="userName" onkeyup="if(event.key === 'Enter') addUser()" class="form-control" placeholder="Tên người mới...">
-              <button onclick="addUser()" class="btn btn-cam px-4"><i class="fa-solid fa-plus"></i></button>
-            </div>
-            <div id="userTags" class="flex flex-wrap gap-2"></div>
-            <p class="text-[10px] text-stone-400 mt-3 mb-0">Bấm vào tên để nhập/sửa tài khoản nhận tiền của họ.</p>
-          </div>
-
-          <div class="app-card border">
-            <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Tôi trong nhóm này</h6>
-            <div class="space-y-3">
-              <select id="meSelect" onchange="linkMeNow()" class="form-select font-semibold text-stone-600"></select>
-              <div class="p-3 border rounded-xl bg-gray-50/50">
-                <div class="text-[10px] font-bold text-stone-400 uppercase mb-1">Tài khoản nhận tiền của tôi</div>
-                <div id="myPayText" class="text-sm font-semibold text-stone-700 break-words"></div>
-              </div>
-              <button onclick="openPay('me')" class="w-full btn-soft justify-center py-2"><i class="fa-solid fa-pen"></i> Sửa tài khoản nhận tiền</button>
-            </div>
-          </div>
-
-          <div class="app-card border">
-            <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Tài khoản đã tham gia nhóm</h6>
-            <div id="memberList" class="mb-3"></div>
-            <div id="inviteForm">
-              <div class="text-[10px] font-bold text-stone-400 uppercase mb-2">Mời thêm bằng email</div>
-              <textarea id="inviteEmails" rows="2" class="form-control text-sm" placeholder="Nhập email, cách nhau bằng dấu phẩy (tối đa 10)"></textarea>
-              <button onclick="sendInvites()" class="w-full btn btn-cam py-2 mt-2 text-xs uppercase"><i class="fa-solid fa-paper-plane"></i> Gửi lời mời</button>
-              <div id="inviteResult" class="mt-3"></div>
-              <div id="pendingInvites" class="mt-3"></div>
-            </div>
-          </div>
-
-          <div class="app-card border">
-            <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Hóa đơn mới</h6>
-            <div class="space-y-3">
-              <input type="text" id="expDesc" class="form-control" placeholder="Nội dung chi...">
-              <input type="number" id="expAmount" class="form-control font-bold" placeholder="Số tiền" oninput="recalcExact()">
-              <select id="expPayer" class="form-select font-semibold text-stone-600"></select>
-              <div class="p-3 border rounded-xl bg-gray-50/50">
-                <div class="flex justify-between items-center mb-3">
-                   <span class="text-[10px] font-bold text-stone-400 uppercase">Chia tiền</span>
-                   <div class="flex gap-3 text-[11px] font-bold">
-                     <label class="cursor-pointer"><input type="radio" name="splitMode" value="EQUAL" checked onchange="toggleSplit()"> ĐỀU</label>
-                     <label class="cursor-pointer"><input type="radio" name="splitMode" value="EXACT" onchange="toggleSplit()"> TÙY CHỈNH</label>
-                   </div>
-                </div>
-                <div id="areaEqual" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto"></div>
-                <div id="areaExact" class="hidden space-y-2 max-h-40 overflow-y-auto"></div>
-              </div>
-              <button onclick="addExpense()" class="w-full btn btn-cam py-3 shadow-sm uppercase text-xs">Xác nhận chi <i class="fa-solid fa-check ms-2"></i></button>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-lg-8">
-          <div id="captureArea" class="bg-white p-5 rounded-[24px] border shadow-sm">
-            <div class="flex justify-between items-center mb-6 px-1">
-                <div>
-                  <h3 class="text-sm font-bold text-stone-800 mb-1">Báo cáo chi tiết</h3>
-                  <p class="text-[10px] text-stone-400 uppercase font-semibold">© 2026 Billing Master • nghia.huynh</p>
-                </div>
-                <i class="fa-solid fa-receipt text-stone-200 fa-2x"></i>
-            </div>
-            <div class="table-container" id="tContainer">
-              <table class="table-matrix text-center align-middle" id="mainTable">
-                <thead id="tableHead"></thead>
-                <tbody id="tableBody"></tbody>
-                <tfoot id="tableFoot"></tfoot>
-              </table>
-            </div>
-          </div>
-        </div>
+  <!-- Hộp thoại xác nhận / nhập -->
+  <div id="dlg" class="ov" role="alertdialog" aria-modal="true" aria-labelledby="dlgTitle">
+    <div class="sheet dlgbox">
+      <h3 id="dlgTitle" style="font-size:18px;font-weight:800;margin-bottom:6px;"></h3>
+      <p id="dlgMsg" style="color:var(--mute);font-size:14px;white-space:pre-line;"></p>
+      <input id="dlgInput" class="inp hidden" style="margin-top:14px;" onkeyup="if(event.key === 'Enter') dlgOk()">
+      <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end;">
+        <button id="dlgCancel" class="btn soft" onclick="dlgClose(null)">Hủy</button>
+        <button id="dlgOkBtn" class="btn primary" onclick="dlgOk()">OK</button>
       </div>
     </div>
   </div>
@@ -262,6 +585,7 @@
     try { token = localStorage.getItem('bm_token') || ''; } catch (e) {}
     let localData = { users: [], expenses: [], payInfo: {}, links: {}, meta: null };
     let homeData = { isAdmin: false, groups: [], invites: [], all: null };
+    let homeLoaded = false;
     let lastInvite = null;
     let transfers = [];
     let settleOpen = false;
@@ -270,6 +594,8 @@
     let payTarget = 'me';     // 'me' hoặc tên thành viên
     let payMethod = 'momo';
     let paySaving = false;
+    let loadCount = 0;
+    let curTab = 'exp';
     // Link mời trong email có dạng /?invite=<mã nhóm>
     let deepLink = '';
     try { const q = new URLSearchParams(location.search); deepLink = (q.get('invite') || q.get('g') || '').trim().toLowerCase().replace(/\s+/g, '-'); } catch (e) {}
@@ -278,12 +604,25 @@
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const fmt = (n) => Math.round(n).toLocaleString('vi-VN');
     const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2, 10));
-    const showLoad = (v) => { $('loading').style.display = v ? 'flex' : 'none'; };
     const normData = (d) => ({ users: d?.users || [], expenses: d?.expenses || [], payInfo: d?.payInfo || {}, links: d?.links || {}, meta: d?.meta || null });
     const getMeta = () => localData.meta || { code: currentG, role: null, canManage: false, members: [], invites: [] };
     const parseSplit = (e) => { try { return JSON.parse(e.splitDetails || '{}') || {}; } catch (_) { return {}; } };
     const myMember = () => (me && localData.links) ? (localData.links[me.sub] || '') : '';
     const fmtDate = (t) => { try { return new Date(t).toLocaleDateString('vi-VN'); } catch (_) { return ''; } };
+
+    // Thanh tiến trình mỏng thay cho màn chờ che toàn trang.
+    function showLoad(v) {
+      loadCount = Math.max(0, loadCount + (v ? 1 : -1));
+      $('loading').style.display = loadCount > 0 ? 'block' : 'none';
+    }
+
+    // ---------- Avatar chữ cái ----------
+    const hue = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.codePointAt(0)) % 360; return h; };
+    const initials = (s) => {
+      const p = String(s || '?').trim().split(/\s+/);
+      return ((p.length > 1 ? p[0][0] + p[p.length - 1][0] : p[0].slice(0, 2)) || '?').toUpperCase();
+    };
+    const av = (name, cls = '') => `<span class="av ${cls}" style="--h:${hue(name)}" aria-hidden="true">${esc(initials(name))}</span>`;
 
     // ---------- Thông tin nhận tiền ----------
     function normPay(p) {
@@ -303,18 +642,85 @@
     // Link nhận tiền MoMo theo SĐT + số tiền. Nếu MoMo đổi định dạng, chỉ cần sửa hàm này.
     const momoLink = (phone, amount) => `https://nhantien.momo.vn/${phone}/${Math.round(amount)}`;
 
-    function toast(msg) {
+    // ---------- Thông báo ----------
+    function toast(msg, kind) {
       const t = $('toast');
       t.textContent = msg;
-      t.style.display = 'block';
+      t.className = 'show' + (kind === 'err' ? ' err' : '');
       clearTimeout(toast._t);
-      toast._t = setTimeout(() => { t.style.display = 'none'; }, 2600);
+      toast._t = setTimeout(() => { t.className = ''; }, kind === 'err' ? 4200 : 2600);
     }
+    const fail = (e) => toast(e && e.message ? e.message : String(e), 'err');
 
     async function copyText(text) {
       try { await navigator.clipboard.writeText(String(text)); toast('Đã sao chép'); }
-      catch (_) { prompt('Sao chép thủ công:', String(text)); }
+      catch (_) { await uiPrompt('Sao chép thủ công:', String(text), { title: 'Sao chép', ok: 'Xong' }); }
     }
+
+    // ---------- Lớp phủ dùng chung ----------
+    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet'];
+    function syncLock() { document.body.classList.toggle('lock', OVERLAYS.some((id) => $(id).classList.contains('open'))); }
+    function openOv(id, blocking) {
+      const el = $(id);
+      el.dataset.block = blocking ? '1' : '';
+      el.classList.add('open');
+      syncLock();
+    }
+    function closeOv(id) { $(id).classList.remove('open'); syncLock(); }
+    OVERLAYS.forEach((id) => $(id).addEventListener('mousedown', (ev) => {
+      if (ev.target !== $(id) || $(id).dataset.block) return;
+      if (id === 'dlg') dlgClose(null);
+      else if (id === 'payModal') closePay();
+      else if (id === 'settleModal') closeSettle();
+      else closeExp();
+    }));
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Escape') return;
+      closeMenu();
+      for (const id of OVERLAYS) {
+        const el = $(id);
+        if (!el.classList.contains('open')) continue;
+        if (id === 'dlg') dlgClose(null);
+        else if (!el.dataset.block) { if (id === 'payModal') closePay(); else if (id === 'settleModal') closeSettle(); else closeExp(); }
+        return;
+      }
+    });
+
+    // Hộp thoại thay cho confirm()/prompt() của trình duyệt.
+    let dlgResolve = null;
+    let dlgIsInput = false;
+    function dlg({ title, msg, input, def, ok, cancel, danger }) {
+      if (dlgResolve) dlgClose(null);
+      return new Promise((resolve) => {
+        dlgResolve = resolve;
+        dlgIsInput = !!input;
+        $('dlgTitle').textContent = title || (input ? 'Nhập thông tin' : 'Xác nhận');
+        $('dlgMsg').textContent = msg || '';
+        const inp = $('dlgInput');
+        inp.classList.toggle('hidden', !input);
+        inp.value = def || '';
+        $('dlgOkBtn').textContent = ok || 'OK';
+        $('dlgOkBtn').className = 'btn ' + (danger ? 'danger' : 'primary');
+        $('dlgCancel').textContent = cancel || 'Hủy';
+        openOv('dlg');
+        setTimeout(() => { try { (input ? inp : $('dlgOkBtn')).focus(); } catch (_) {} }, 30);
+      });
+    }
+    function dlgClose(val) {
+      const r = dlgResolve;
+      dlgResolve = null;
+      closeOv('dlg');
+      if (r) r(val);
+    }
+    function dlgOk() { dlgClose(dlgIsInput ? $('dlgInput').value : true); }
+    function uiConfirm(msg, o = {}) { return dlg({ msg, ...o }).then((v) => v === true); }
+    function uiPrompt(msg, def = '', o = {}) { return dlg({ msg, input: true, def, ...o }); }
+
+    // ---------- Menu tài khoản ----------
+    function toggleMenu(ev) { if (ev) ev.stopPropagation(); $('userMenu').classList.toggle('open'); }
+    function closeMenu() { $('userMenu').classList.remove('open'); }
+    document.addEventListener('click', (ev) => { if (!ev.target.closest || !ev.target.closest('.menu-wrap')) closeMenu(); });
+    function goHome() { if (!me) return; if (currentG) exitGroup(); else window.scrollTo({ top: 0 }); }
 
     // ---------- API ----------
     async function api(path, { method = 'GET', body } = {}) {
@@ -332,19 +738,28 @@
 
     // ---------- Màn hình ----------
     function showScreen(name) {
-      $('loginArea').style.display = name === 'login' ? 'block' : 'none';
+      $('loginArea').style.display = name === 'login' ? 'flex' : 'none';
       $('groupArea').style.display = name === 'group' ? 'block' : 'none';
       $('mainApp').style.display = name === 'app' ? 'block' : 'none';
-      $('userBar').style.display = (name !== 'login' && me) ? 'flex' : 'none';
+      $('userBar').style.display = (name !== 'login' && me) ? 'block' : 'none';
+      closeMenu();
+      try { window.scrollTo({ top: 0 }); } catch (_) {}
     }
 
     function setSession(user, profile) {
       myProfile = profile || {};
       me = { sub: user.sub, email: user.email, name: user.name || user.email, picture: myProfile.picture || '' };
       $('userNameLbl').textContent = me.name;
-      const av = $('userAvatar');
-      av.style.display = me.picture ? 'block' : 'none';
-      if (me.picture) av.src = me.picture;
+      $('userEmailLbl').textContent = me.email;
+      const av0 = $('userAvatar');
+      av0.style.display = me.picture ? 'block' : 'none';
+      if (me.picture) av0.src = me.picture;
+      const ini = $('userInit');
+      ini.style.display = me.picture ? 'none' : 'inline-grid';
+      ini.textContent = initials(me.name);
+      ini.style.setProperty('--h', hue(me.name));
+      const first = String(me.name).trim().split(/\s+/).pop();
+      $('greetHi').textContent = first ? `Chào ${first}` : 'Nhóm của tôi';
     }
 
     // Sau khi đăng nhập: vào danh sách nhóm; nếu chưa có tài khoản nhận tiền thì bắt buộc đăng ký.
@@ -384,7 +799,7 @@
     }
 
     function doLogout() {
-      token = ''; me = null; myProfile = {}; currentG = '';
+      token = ''; me = null; myProfile = {}; currentG = ''; homeLoaded = false;
       homeData = { isAdmin: false, groups: [], invites: [], all: null };
       lastInvite = null;
       $('adminBadge').style.display = 'none';
@@ -392,6 +807,7 @@
       try { google.accounts.id.disableAutoSelect(); } catch (_) {}
       closeSettle();
       closePay();
+      closeExp();
       showScreen('login');
       initGoogle();
     }
@@ -424,11 +840,11 @@
       const isMe = target === 'me';
       const cur = isMe ? profilePay(myProfile) : payOf(target);
 
-      $('payTitle').textContent = blocking ? 'Đăng ký tài khoản nhận tiền'
+      $('payTitle').textContent = blocking ? 'Nhận tiền bằng cách nào?'
         : (isMe ? 'Tài khoản nhận tiền của tôi' : `Tài khoản nhận tiền của ${target}`);
       $('payHint').textContent = blocking
-        ? 'Chào mừng! Hãy đăng ký 1 tài khoản MoMo hoặc ngân hàng để khi Settle up, người khác biết chuyển tiền cho bạn ở đâu.'
-        : (isMe ? 'Thông tin này hiện cho cả nhóm khi Settle up.' : 'Dùng khi người này chưa đăng nhập hoặc chưa tự đăng ký.');
+        ? 'Chào mừng! Chọn MoMo hoặc ngân hàng. Khi Settle up, mọi người sẽ biết chuyển tiền cho bạn ở đâu.'
+        : (isMe ? 'Cả nhóm sẽ thấy thông tin này khi Settle up.' : 'Dùng khi người này chưa đăng nhập hoặc chưa tự đăng ký.');
 
       $('payClose').style.display = blocking ? 'none' : '';
       $('payLogout').classList.toggle('hidden', !blocking);
@@ -440,17 +856,10 @@
       $('payBankAcc').value = cur && cur.method === 'bank' ? cur.bankAccount : '';
       $('payBankHolder').value = cur && cur.method === 'bank' ? cur.bankHolder : '';
       setPayMethod(cur ? cur.method : 'momo');
-
-      const m = $('payModal');
-      m.classList.remove('hidden');
-      m.classList.add('flex');
+      openOv('payModal', blocking);
     }
 
-    function closePay() {
-      const m = $('payModal');
-      m.classList.add('hidden');
-      m.classList.remove('flex');
-    }
+    function closePay() { closeOv('payModal'); }
 
     function readPayForm() {
       return payMethod === 'momo'
@@ -471,7 +880,7 @@
           // Nếu đang ở trong nhóm và đã chọn mình là ai thì đồng bộ sang nhóm.
           if (currentG && myMember()) await mutate({ action: 'linkMe', memberName: myMember() });
           toast('Đã lưu tài khoản nhận tiền');
-        } catch (e) { alert(e.message); }
+        } catch (e) { fail(e); }
         finally { paySaving = false; }
       } else {
         if (await mutate({ action: 'setPayInfo', memberName: payTarget, pay })) { closePay(); toast('Đã lưu'); }
@@ -480,7 +889,7 @@
 
     async function deletePay() {
       if (payTarget === 'me') return;
-      if (!confirm(`Xóa thông tin nhận tiền của "${payTarget}"?`)) return;
+      if (!(await uiConfirm(`Xóa thông tin nhận tiền của "${payTarget}"?`, { title: 'Xóa thông tin', ok: 'Xóa', danger: true }))) return;
       if (await mutate({ action: 'setPayInfo', memberName: payTarget, pay: null })) closePay();
     }
 
@@ -496,49 +905,49 @@
     // ---------- Danh sách nhóm (màn Nhóm của tôi) ----------
     async function loadHome() {
       showLoad(true);
+      if (!homeLoaded) $('myGroups').innerHTML = '<div class="sk"></div><div class="sk"></div>';
       try {
         homeData = await api('/api/groups');
-        $('adminBadge').style.display = homeData.isAdmin ? 'inline-block' : 'none';
+        homeLoaded = true;
+        $('adminBadge').style.display = homeData.isAdmin ? 'inline-flex' : 'none';
         renderHome();
         handleDeepLink();
       } catch (e) {
-        if (token) alert(e.message);
+        if (token) fail(e);
       } finally { showLoad(false); }
     }
 
     function renderHome() {
       const h = homeData;
-      $('inviteBox').innerHTML = h.invites.length ? `<div class="app-card border mb-4" style="border-color: var(--momo);">
-        <h6 class="text-[11px] font-bold uppercase tracking-widest mb-3" style="color: var(--momo);"><i class="fa-solid fa-envelope-open-text me-1"></i> Lời mời tham gia (${h.invites.length})</h6>
-        ${h.invites.map((v, i) => `<div id="inv-${i}" class="row-item">
-          <div class="text-sm"><b>${esc(v.code)}</b><div class="text-[11px] text-stone-500">${esc(v.invitedBy)} mời bạn${v.at ? ' • ' + fmtDate(v.at) : ''}</div></div>
-          <div class="flex gap-2">
-            <button class="btn-ok" onclick="respondInvite(${i}, 'accept')"><i class="fa-solid fa-check"></i> Đồng ý</button>
-            <button class="btn-soft" onclick="respondInvite(${i}, 'decline')">Từ chối</button>
-          </div></div>`).join('')}
-      </div>` : '';
+      $('inviteBox').innerHTML = h.invites.length ? `<h2 class="sec-t" style="margin-top:0;">Lời mời tham gia (${h.invites.length})</h2>` +
+        h.invites.map((v, i) => `<div id="inv-${i}" class="invite">
+          <div class="t"><b>${esc(v.code)}</b><small>${esc(v.invitedBy)} mời bạn${v.at ? ', ' + fmtDate(v.at) : ''}</small></div>
+          <div class="act">
+            <button class="btn primary sm" onclick="respondInvite(${i}, 'accept')"><i class="fa-solid fa-check"></i> Đồng ý</button>
+            <button class="btn soft sm" onclick="respondInvite(${i}, 'decline')">Từ chối</button>
+          </div></div>`).join('') : '';
 
-      $('myGroups').innerHTML = h.groups.length ? h.groups.map((g, i) => `<div class="row-item">
-          <div class="text-sm"><b>${esc(g.code)}</b>
-            ${g.role === 'owner' ? '<span class="badge-nhan ms-1">Trưởng nhóm</span>' : ''}
-            <div class="text-[11px] text-stone-500">${g.memberCount} thành viên • ${g.billCount} khoản chi</div></div>
-          <button class="btn btn-cam btn-sm px-4" onclick="openGroupAt(${i})">Mở</button></div>`).join('')
-        : '<p class="text-sm text-stone-400 mb-0">Bạn chưa tham gia nhóm nào. Hãy tạo nhóm mới hoặc nhờ trưởng nhóm mời qua email.</p>';
+      $('myGroups').innerHTML = h.groups.length ? h.groups.map((g, i) => `<button class="gcard" onclick="openGroupAt(${i})">
+          ${av(g.code, 'sq')}
+          <span class="mid"><b><span class="n">${esc(g.code)}</span>${g.role === 'owner' ? '<span class="badge nhan">Trưởng nhóm</span>' : ''}</b>
+            <small>${g.memberCount} thành viên, ${g.billCount} khoản chi</small></span>
+          <i class="fa-solid fa-chevron-right"></i></button>`).join('')
+        : `<div class="empty card"><b>Chưa có nhóm nào</b>Tạo nhóm đầu tiên bên dưới, hoặc nhờ trưởng nhóm mời bạn qua email.</div>`;
 
-      $('adminBox').innerHTML = (h.isAdmin && h.all) ? `<div class="app-card border mb-4" style="border-color: #174EA6;">
-        <h6 class="text-[11px] font-bold uppercase tracking-widest mb-3" style="color:#174EA6;"><i class="fa-solid fa-user-shield me-1"></i> Quản trị: tất cả nhóm (${h.all.length})</h6>
-        ${h.all.length ? `<div class="table-container"><table class="table-matrix" style="min-width: 520px;">
-          <thead><tr><th class="text-start">Mã nhóm</th><th>Trưởng nhóm</th><th>TV</th><th>Khoản chi</th><th></th></tr></thead>
+      $('adminBox').innerHTML = (h.isAdmin && h.all) ? `<details class="adm">
+        <summary><i class="fa-solid fa-user-shield"></i> Quản trị: tất cả nhóm (${h.all.length}) <i class="fa-solid fa-chevron-down" style="margin-left:auto;font-size:12px;"></i></summary>
+        <div class="tw">${h.all.length ? `<table class="atable">
+          <thead><tr><th>Mã nhóm</th><th>Trưởng nhóm</th><th>TV</th><th>Khoản chi</th><th></th></tr></thead>
           <tbody>${h.all.map((g, i) => `<tr>
-            <td class="text-start font-semibold">${esc(g.code)}</td>
-            <td class="text-[11px] text-stone-500">${esc(g.ownerEmail)}</td>
+            <td><b>${esc(g.code)}</b></td>
+            <td class="hint">${esc(g.ownerEmail)}</td>
             <td>${g.memberCount}</td><td>${g.billCount}</td>
-            <td><div class="flex gap-1 justify-end">
-              <button class="btn-soft" onclick="openGroupAdmin(${i})">Mở</button>
-              <button class="btn-soft" onclick="adminRename(${i})">Đổi mã</button>
-              <button class="btn-danger-soft" onclick="adminDelete(${i})">Xóa</button>
-            </div></td></tr>`).join('')}</tbody></table></div>` : '<p class="text-sm text-stone-400 mb-0">Chưa có nhóm nào.</p>'}
-      </div>` : '';
+            <td><div class="acts">
+              <button class="btn soft sm" onclick="openGroupAdmin(${i})">Mở</button>
+              <button class="btn soft sm" onclick="adminRename(${i})">Đổi mã</button>
+              <button class="btn danger sm" onclick="adminDelete(${i})">Xóa</button>
+            </div></td></tr>`).join('')}</tbody></table>` : '<p class="hint" style="padding:14px;">Chưa có nhóm nào.</p>'}</div>
+      </details>` : '';
     }
 
     function handleDeepLink() {
@@ -551,22 +960,23 @@
       if (ii >= 0) {
         const el = $('inv-' + ii);
         if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('flash'); }
-        toast(`Bạn được mời vào nhóm "${c}" — bấm Đồng ý để tham gia`);
+        toast(`Bạn được mời vào nhóm "${c}". Bấm Đồng ý để tham gia.`);
         return;
       }
-      toast('Bạn chưa được mời vào nhóm này. Hãy đăng nhập đúng email được mời.');
+      toast('Bạn chưa được mời vào nhóm này. Hãy đăng nhập đúng email được mời.', 'err');
     }
 
     async function createGroup() {
       const code = $('newGroupCode').value.trim();
-      if (!code) return alert('Hãy nhập mã nhóm!');
+      if (!code) { toast('Hãy nhập mã nhóm, ví dụ di-da-lat', 'err'); $('newGroupCode').focus(); return; }
       showLoad(true);
       try {
         const r = await api('/api/groups', { method: 'POST', body: { action: 'create', code } });
         $('newGroupCode').value = '';
         showLoad(false);
+        toast(`Đã tạo nhóm "${r.code}"`);
         await openGroup(r.code);
-      } catch (e) { showLoad(false); alert(e.message); }
+      } catch (e) { showLoad(false); fail(e); }
     }
 
     async function respondInvite(i, action) {
@@ -577,8 +987,8 @@
         await api('/api/groups', { method: 'POST', body: { action, code: v.code } });
         showLoad(false);
         if (action === 'accept') { toast(`Đã tham gia nhóm "${v.code}"`); await openGroup(v.code); }
-        else await loadHome();
-      } catch (e) { showLoad(false); alert(e.message); }
+        else { toast('Đã từ chối lời mời'); await loadHome(); }
+      } catch (e) { showLoad(false); fail(e); }
     }
 
     function openGroupAt(i) { if (homeData.groups[i]) openGroup(homeData.groups[i].code); }
@@ -587,29 +997,29 @@
     async function adminRename(i) {
       const g = homeData.all[i];
       if (!g) return;
-      const nc = prompt(`Đổi mã nhóm "${g.code}" thành:`, g.code);
+      const nc = await uiPrompt(`Đổi mã nhóm "${g.code}" thành:`, g.code, { title: 'Đổi mã nhóm', ok: 'Đổi mã' });
       if (nc === null || !nc.trim() || nc.trim().toLowerCase() === g.code) return;
       showLoad(true);
       try {
         const r = await api('/api/groups', { method: 'POST', body: { action: 'rename', code: g.code, newCode: nc } });
         toast(`Đã đổi mã thành "${r.code}"`);
         await loadHome();
-      } catch (e) { alert(e.message); }
+      } catch (e) { fail(e); }
       finally { showLoad(false); }
     }
 
     async function adminDelete(i) {
       const g = homeData.all[i];
       if (!g) return;
-      const t = prompt(`XÓA nhóm "${g.code}" cùng toàn bộ dữ liệu (không khôi phục được).\nGõ lại mã nhóm để xác nhận:`);
+      const t = await uiPrompt(`Xóa nhóm "${g.code}" cùng toàn bộ dữ liệu, không khôi phục được.\nGõ lại mã nhóm để xác nhận:`, '', { title: 'Xóa nhóm', ok: 'Xóa nhóm', danger: true });
       if (t === null) return;
-      if (t.trim().toLowerCase() !== g.code) return alert('Mã không khớp, chưa xóa gì cả.');
+      if (t.trim().toLowerCase() !== g.code) { toast('Mã không khớp, chưa xóa gì cả.', 'err'); return; }
       showLoad(true);
       try {
         await api('/api/groups', { method: 'POST', body: { action: 'delete', code: g.code } });
         toast(`Đã xóa nhóm "${g.code}"`);
         await loadHome();
-      } catch (e) { alert(e.message); }
+      } catch (e) { fail(e); }
       finally { showLoad(false); }
     }
 
@@ -618,18 +1028,19 @@
       showLoad(true);
       try {
         const data = normData(await api('/api/data?groupId=' + encodeURIComponent(code)));
+        const sameGroup = currentG && currentG === ((data.meta && data.meta.code) || code);
         currentG = (data.meta && data.meta.code) || code;
         localData = data;
         lastInvite = null;
         $('inviteResult').innerHTML = '';
-        openApp();
+        openApp(sameGroup);
         render();
-      } catch (e) { alert(e.message); }
+      } catch (e) { fail(e); }
       finally { showLoad(false); }
     }
 
     // Làm mới dữ liệu nhóm đang mở (nút "Làm mới").
-    function loadGroup() { if (currentG) openGroup(currentG); }
+    function loadGroup() { if (currentG) openGroup(currentG).then(() => toast('Đã cập nhật')); }
 
     // Tải lại dữ liệu mà không đổi màn hình.
     async function refreshGroup() {
@@ -638,37 +1049,50 @@
       render();
     }
 
-    function openApp() {
+    function openApp(keepTab) {
       showScreen('app');
       $('displayGroupId').textContent = currentG.toUpperCase();
+      setTab(keepTab ? curTab : 'exp');
     }
 
     function exitGroup() {
       currentG = '';
       closeSettle();
+      closeExp();
       showScreen('group');
       loadHome();
+    }
+
+    function setTab(name) {
+      curTab = name;
+      ['exp', 'bal', 'table', 'people'].forEach((t) => {
+        $('pn-' + t).classList.toggle('on', t === name);
+        $('tb-' + t).classList.toggle('on', t === name);
+        $('tb-' + t).setAttribute('aria-selected', t === name ? 'true' : 'false');
+      });
     }
 
     // Gọi API ghi dữ liệu nhóm; server trả về toàn bộ dữ liệu mới nhất.
     async function mutate(body) {
       if (busy) return false;
       busy = true;
+      showLoad(true);
       try {
         const r = await api('/api/data', { method: 'POST', body: { groupId: currentG, ...body } });
         localData = normData(r.data);
         render();
         return true;
       } catch (e) {
-        alert(e.message);
+        fail(e);
         return false;
-      } finally { busy = false; }
+      } finally { busy = false; showLoad(false); }
     }
 
     async function addUser() {
       const n = $('userName').value.trim();
-      if (!n || localData.users.includes(n)) return;
-      if (await mutate({ action: 'addUser', userName: n })) $('userName').value = "";
+      if (!n) return;
+      if (localData.users.includes(n)) { toast(`"${n}" đã có trong nhóm`, 'err'); return; }
+      if (await mutate({ action: 'addUser', userName: n })) { $('userName').value = ""; toast(`Đã thêm ${n}`); }
     }
 
     function linkMeNow() {
@@ -681,19 +1105,19 @@
     function renderMembers() {
       const meta = getMeta();
       $('roleBadge').textContent = ROLE_LABEL[meta.role] || '';
-      $('roleBadge').style.display = meta.role ? 'inline-block' : 'none';
+      $('roleBadge').style.display = meta.role ? 'inline-flex' : 'none';
 
-      $('memberList').innerHTML = meta.members.length ? meta.members.map(m => `<div class="flex items-center justify-between gap-2 py-1.5 border-b border-gray-100">
-          <div class="min-w-0"><div class="text-[12px] font-semibold text-stone-700 truncate">${esc(m.name)}${me && m.sub === me.sub ? ' (bạn)' : ''}</div>
-          <div class="text-[10px] text-stone-400 truncate">${esc(m.email)}</div></div>
-          ${m.role === 'owner' ? '<span class="badge-nhan">Trưởng nhóm</span>' : ''}</div>`).join('')
-        : '<p class="text-[11px] text-stone-400 mb-0">Chưa có tài khoản nào.</p>';
+      $('memberList').innerHTML = meta.members.length ? meta.members.map(m => `<div class="mem">
+          ${av(m.name)}
+          <div class="mid"><b>${esc(m.name)}${me && m.sub === me.sub ? ' (bạn)' : ''}</b><small>${esc(m.email)}</small></div>
+          ${m.role === 'owner' ? '<span class="badge nhan">Trưởng nhóm</span>' : ''}</div>`).join('')
+        : '<p class="hint">Chưa có tài khoản nào.</p>';
 
       $('inviteForm').style.display = meta.canManage ? 'block' : 'none';
-      $('pendingInvites').innerHTML = meta.invites.length ? `<div class="text-[10px] font-bold text-stone-400 uppercase mb-1">Đang chờ đồng ý (${meta.invites.length})</div>` +
-        meta.invites.map((v, i) => `<div class="flex items-center justify-between gap-2 py-1">
-          <span class="text-[12px] text-stone-600 truncate">${esc(v.email)}</span>
-          <button class="btn-delete" title="Huỷ lời mời" onclick="cancelInvite(${i})"><i class="fa-solid fa-xmark"></i></button></div>`).join('') : '';
+      $('pendingInvites').innerHTML = meta.invites.length ? `<div class="sub-t" style="margin-top:0;">Đang chờ đồng ý (${meta.invites.length})</div>` +
+        meta.invites.map((v, i) => `<div class="pend">
+          <span style="overflow:hidden;text-overflow:ellipsis;">${esc(v.email)}</span>
+          <button class="ibtn del" title="Huỷ lời mời" aria-label="Huỷ lời mời" onclick="cancelInvite(${i})"><i class="fa-solid fa-xmark"></i></button></div>`).join('') : '';
     }
 
     const INVITE_STATUS = {
@@ -707,76 +1131,139 @@
       const needManual = r.results.some(x => (x.status === 'invited' || x.status === 'resent') && !x.emailSent);
       const rows = r.results.map(x => {
         let label = INVITE_STATUS[x.status] || x.status;
-        let color = '#5F6368';
+        let cls = '';
         if (x.status === 'invited' || x.status === 'resent') {
-          if (x.emailSent) { label += ' • đã gửi email'; color = '#137333'; }
-          else { label += ' • chưa gửi được email'; color = '#C5221F'; }
-        } else if (x.status === 'invalid' || x.status === 'limit') color = '#C5221F';
-        return `<div class="text-[11px]" style="color:${color};"><b>${esc(x.email)}</b>: ${esc(label)}</div>`;
+          if (x.emailSent) { label += ', đã gửi email'; cls = 'ok'; }
+          else { label += ', chưa gửi được email'; cls = 'bad'; }
+        } else if (x.status === 'invalid' || x.status === 'limit') cls = 'bad';
+        return `<div class="${cls}"><b>${esc(x.email)}</b>: ${esc(label)}</div>`;
       }).join('');
-      $('inviteResult').innerHTML = `<div class="p-3 border rounded-xl bg-gray-50/50">
+      $('inviteResult').innerHTML = `<div class="inv-res">
         ${rows}
-        ${needManual ? `<div class="text-[11px] text-stone-500 mt-2">${r.mailConfigured ? 'Gửi email lỗi (kiểm tra cấu hình SMTP).' : 'Server chưa cấu hình gửi email.'} Lời mời vẫn có hiệu lực: hãy sao chép nội dung bên dưới và gửi cho họ qua Zalo/Messenger.</div>` : ''}
-        <div class="text-[10px] text-stone-400 mt-2">Mã nhóm: <b>${esc(r.code)}</b></div>
-        <div class="flex flex-wrap gap-2 mt-2">
-          <button class="btn-soft" onclick="copyText(lastInvite.link)"><i class="fa-regular fa-copy"></i> Link</button>
-          <button class="btn-soft" onclick="copyText(lastInvite.shareText)"><i class="fa-regular fa-copy"></i> Sao chép lời mời</button>
+        ${needManual ? `<div class="hint" style="margin-top:8px;">${r.mailConfigured ? 'Gửi email lỗi (kiểm tra cấu hình SMTP).' : 'Server chưa cấu hình gửi email.'} Lời mời vẫn có hiệu lực: hãy sao chép nội dung bên dưới và gửi qua Zalo hoặc Messenger.</div>` : ''}
+        <div class="hint" style="margin-top:8px;">Mã nhóm: <b>${esc(r.code)}</b></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
+          <button class="btn soft sm" onclick="copyText(lastInvite.link)"><i class="fa-regular fa-copy"></i> Sao chép link</button>
+          <button class="btn soft sm" onclick="copyText(lastInvite.shareText)"><i class="fa-regular fa-copy"></i> Sao chép lời mời</button>
         </div></div>`;
     }
 
     async function sendInvites() {
       const raw = $('inviteEmails').value.trim();
-      if (!raw) return alert('Hãy nhập ít nhất 1 email!');
+      if (!raw) { toast('Hãy nhập ít nhất 1 email', 'err'); $('inviteEmails').focus(); return; }
       showLoad(true);
       try {
         lastInvite = await api('/api/groups', { method: 'POST', body: { action: 'invite', code: currentG, emails: raw } });
         $('inviteEmails').value = '';
         renderInviteResult();
         await refreshGroup();
-      } catch (e) { alert(e.message); }
+      } catch (e) { fail(e); }
       finally { showLoad(false); }
     }
 
     async function cancelInvite(i) {
       const v = getMeta().invites[i];
-      if (!v || !confirm(`Huỷ lời mời gửi tới ${v.email}?`)) return;
+      if (!v || !(await uiConfirm(`Huỷ lời mời gửi tới ${v.email}?`, { title: 'Huỷ lời mời', ok: 'Huỷ lời mời', cancel: 'Giữ lại', danger: true }))) return;
       showLoad(true);
       try {
         await api('/api/groups', { method: 'POST', body: { action: 'cancelInvite', code: currentG, email: v.email } });
         await refreshGroup();
-      } catch (e) { alert(e.message); }
+      } catch (e) { fail(e); }
       finally { showLoad(false); }
     }
 
-    // ---------- Hóa đơn ----------
+    // ---------- Thêm khoản chi ----------
+    // Nhận "150000", "150.000", "150k", "1.2tr", "1,5tr".
+    function parseAmount(raw) {
+      const s = String(raw ?? '').trim().toLowerCase().replace(/\s+/g, '');
+      const m = s.match(/^(\d+(?:[.,]\d+)*)(k|nghìn|nghin|tr|triệu|trieu|m)?$/);
+      if (!m) return 0;
+      if (m[2]) {
+        const mult = /^(k|nghìn|nghin)$/.test(m[2]) ? 1e3 : 1e6;
+        return Math.round((parseFloat(m[1].replace(',', '.')) || 0) * mult);
+      }
+      return Math.round(Number(m[1].replace(/[.,]/g, ''))) || 0;
+    }
+
+    const splitMode = () => document.querySelector('input[name="splitMode"]:checked').value;
+
+    function openExp() {
+      if (!localData.users.length) { toast('Nhóm chưa có người chia tiền. Thêm ở tab Thành viên.', 'err'); setTab('people'); return; }
+      if (!$('expPayer').value && myMember()) $('expPayer').value = myMember();
+      onAmtInput();
+      openOv('expSheet');
+      setTimeout(() => { try { $('expDesc').focus(); } catch (_) {} }, 60);
+    }
+    function closeExp() { closeOv('expSheet'); }
+
+    function quickCat(label) {
+      $('expDesc').value = label;
+      $('expAmount').focus();
+    }
+
+    function onAmtInput() {
+      const a = parseAmount($('expAmount').value);
+      const raw = $('expAmount').value.trim();
+      $('amtPreview').textContent = a > 0 ? `= ${fmt(a)}đ` : (raw ? 'Nhập số, ví dụ 150000 hoặc 150k' : '');
+      recalcExact();
+      updateSplitHint();
+    }
+
     function toggleSplit() {
-      const m = document.querySelector('input[name="splitMode"]:checked').value;
+      const m = splitMode();
       $('areaEqual').classList.toggle('hidden', m !== "EQUAL");
       $('areaExact').classList.toggle('hidden', m === "EQUAL");
       if (m === "EXACT") recalcExact();
+      updateSplitHint();
+    }
+
+    function updateSplitHint() {
+      const el = $('splitHint');
+      const a = parseAmount($('expAmount').value);
+      if (splitMode() === 'EQUAL') {
+        const n = document.querySelectorAll('.p-check:checked').length;
+        el.className = 'split-hint';
+        if (!n) { el.textContent = 'Chọn ít nhất 1 người'; el.className = 'split-hint err'; }
+        else el.textContent = a > 0 ? `${n} người, mỗi người khoảng ${fmt(a / n)}đ` : `${n} người được chọn`;
+      } else {
+        const sum = Array.from(document.querySelectorAll('.exact-in')).reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+        const diff = Math.round(a - sum);
+        el.className = 'split-hint' + (a > 0 && Math.abs(diff) > 1 ? ' err' : '');
+        el.textContent = a > 0 ? (Math.abs(diff) <= 1 ? `Đã chia đủ ${fmt(sum)}đ` : `Đã chia ${fmt(sum)}đ, ${diff > 0 ? 'còn thiếu' : 'đang dư'} ${fmt(Math.abs(diff))}đ`) : '';
+      }
     }
 
     async function addExpense() {
       const d = $('expDesc').value.trim();
-      const a = parseFloat($('expAmount').value);
+      const a = parseAmount($('expAmount').value);
       const p = $('expPayer').value;
-      if (!d || !a || !p) return alert("Thiếu thông tin hóa đơn!");
+      if (!d) { toast('Nhập nội dung khoản chi', 'err'); $('expDesc').focus(); return; }
+      if (!a) { toast('Nhập số tiền hợp lệ, ví dụ 150000 hoặc 150k', 'err'); $('expAmount').focus(); return; }
+      if (!p) { toast('Chọn người trả tiền', 'err'); $('expPayer').focus(); return; }
 
       let owes = {};
-      const m = document.querySelector('input[name="splitMode"]:checked').value;
-      if (m === "EQUAL") {
+      if (splitMode() === "EQUAL") {
         const sel = Array.from(document.querySelectorAll('.p-check:checked')).map(c => c.value);
-        if (sel.length === 0) return alert("Chưa chọn người chịu tiền!");
-        sel.forEach(u => owes[u] = a / sel.length);
+        if (sel.length === 0) { toast('Chọn ít nhất 1 người chịu tiền', 'err'); return; }
+        // Chia nguyên đồng: người đầu danh sách gánh phần lẻ để tổng luôn khớp.
+        const base = Math.floor(a / sel.length);
+        let rem = a - base * sel.length;
+        sel.forEach(u => { owes[u] = base + (rem > 0 ? 1 : 0); if (rem > 0) rem--; });
       } else {
         document.querySelectorAll('.exact-in').forEach(i => { if (i.value > 0) owes[i.dataset.user] = parseFloat(i.value); });
         const sum = Object.values(owes).reduce((s, v) => s + v, 0);
-        if (sum === 0) return alert("Chưa nhập số tiền cho ai!");
-        if (Math.abs(sum - a) > 1 && !confirm(`Tổng chia (${fmt(sum)}) khác số tiền hóa đơn (${fmt(a)}). Vẫn lưu?`)) return;
+        if (sum === 0) { toast('Chưa nhập số tiền cho ai', 'err'); return; }
+        if (Math.abs(sum - a) > 1 && !(await uiConfirm(`Tổng chia (${fmt(sum)}đ) khác số tiền hóa đơn (${fmt(a)}đ). Vẫn lưu?`, { title: 'Tổng chia chưa khớp', ok: 'Vẫn lưu', cancel: 'Sửa lại' }))) return;
       }
 
       const ok = await mutate({ action: 'addExpense', id: uid(), desc: d, amount: a, payer: p, splitDetails: JSON.stringify(owes) });
-      if (ok) { $('expDesc').value = ""; $('expAmount').value = ""; }
+      if (ok) {
+        $('expDesc').value = ""; $('expAmount').value = "";
+        onAmtInput();
+        closeExp();
+        setTab('exp');
+        toast('Đã thêm khoản chi');
+      }
     }
 
     function handleExactInput(el) {
@@ -785,7 +1272,7 @@
     }
 
     function recalcExact() {
-      const totalAmount = parseFloat($('expAmount').value) || 0;
+      const totalAmount = parseAmount($('expAmount').value);
       const inputs = Array.from(document.querySelectorAll('.exact-in'));
       let manualSum = 0;
       let autoInputs = [];
@@ -797,13 +1284,14 @@
         const splitValue = (totalAmount - manualSum) / autoInputs.length;
         autoInputs.forEach(inp => { inp.value = splitValue > 0 ? Math.round(splitValue) : 0; });
       }
+      updateSplitHint();
     }
 
-    function deleteExpense(id) {
+    async function deleteExpense(id) {
       const e = localData.expenses.find(x => x.id === id);
       if (!e) return;
-      if (!confirm(`Xóa khoản: "${e.desc}"?`)) return;
-      mutate({ action: 'deleteExpense', id });
+      if (!(await uiConfirm(`Xóa khoản "${e.desc}"? Số dư của cả nhóm sẽ được tính lại.`, { title: 'Xóa khoản chi', ok: 'Xóa', danger: true }))) return;
+      if (await mutate({ action: 'deleteExpense', id })) toast('Đã xóa khoản chi');
     }
 
     // ---------- Tính toán ----------
@@ -848,95 +1336,187 @@
       return out;
     }
 
-    // ---------- Render bảng ----------
-    function render() {
+    // ---------- Render ----------
+    function renderHero(bal) {
       const { users, expenses } = localData;
-      const keepPayer = $('expPayer').value;
+      const bills = expenses.filter(e => !e.settle);
+      const total = bills.reduce((a, e) => a + e.amount, 0);
       const mine = myMember();
-      renderMyPay();
-      renderMembers();
+      const nTrans = computeTransfers().length;
 
-      $('userTags').innerHTML = users.map((u, i) => {
-        const p = payOf(u);
-        const icon = !p ? '<i class="fa-solid fa-pen text-stone-300"></i>'
-          : (p.method === 'bank' ? '<i class="fa-solid fa-building-columns" style="color:#174EA6;"></i>' : '<i class="fa-solid fa-mobile-screen" style="color: var(--momo);"></i>');
-        return `<button type="button" onclick="editPay(${i})" title="Bấm để nhập tài khoản nhận tiền" class="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full text-[11px] font-semibold border inline-flex items-center gap-1.5">${esc(u)}${u === mine ? ' (bạn)' : ''} ${icon}</button>`;
-      }).join('');
-
-      $('expPayer').innerHTML = '<option value="">-- Ai trả? --</option>' + users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
-      if (users.includes(keepPayer)) $('expPayer').value = keepPayer;
-
-      if (document.activeElement !== $('meSelect')) {
-        $('meSelect').innerHTML = '<option value="">-- Tôi là thành viên nào? --</option>' + users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
-        $('meSelect').value = mine;
+      let st;
+      if (!mine) {
+        st = `<div class="rc-st none"><div class="what">Bạn chưa chọn tên của mình<b>Bạn là ai trong nhóm?</b></div>
+          <button class="btn soft sm" onclick="setTab('people'); setTimeout(() => $('meSelect').focus(), 50)">Chọn tên của bạn</button></div>`;
+      } else {
+        const v = Math.round(bal.d[mine] || 0);
+        if (v > 0) st = `<div class="rc-st neg"><div class="what">Bạn cần đóng<b class="num">${fmt(v)}đ</b></div></div>`;
+        else if (v < 0) st = `<div class="rc-st pos"><div class="what">Bạn sẽ nhận<b class="num">${fmt(-v)}đ</b></div></div>`;
+        else st = `<div class="rc-st none"><div class="what">${bills.length ? 'Bạn đã cân bằng' : 'Chưa có khoản chi'}<b>${bills.length ? 'Không nợ ai, không ai nợ bạn' : 'Bấm Thêm khoản chi để bắt đầu'}</b></div></div>`;
       }
 
-      $('areaEqual').innerHTML = users.map(u => `<label class="flex items-center gap-2 border p-2 rounded-lg bg-white text-[11px] font-semibold cursor-pointer"><input type="checkbox" class="p-check" value="${esc(u)}" checked> ${esc(u)}</label>`).join('');
-      $('areaExact').innerHTML = users.map(u => `<div class="input-group input-group-sm mb-1"><span class="input-group-text bg-white text-[10px] w-16 font-semibold truncate">${esc(u)}</span><input type="number" class="exact-in form-control font-bold" data-user="${esc(u)}" data-manual="false" oninput="handleExactInput(this)"></div>`).join('');
+      const shown = users.slice(0, 5);
+      $('hero').innerHTML = `
+        <div class="rc-top"><span>Tổng chi của nhóm</span><span>${bills.length} khoản chi, ${users.length} người</span></div>
+        <div class="rc-total num">${fmt(total)}<small>đ</small></div>
+        <div class="rc-sep"></div>
+        ${st}
+        <div class="rc-foot">
+          <div class="avs">${shown.map(u => av(u)).join('')}${users.length > shown.length ? `<span class="av" style="--h:260">+${users.length - shown.length}</span>` : ''}</div>
+          <button class="btn primary" onclick="openSettle()"><i class="fa-solid fa-handshake"></i> Settle up${nTrans ? ` (${nTrans})` : ''}</button>
+        </div>`;
+    }
 
+    function renderExpenses() {
+      const { users, expenses } = localData;
+      const bills = expenses.filter(e => !e.settle).slice().reverse();
+      const settles = expenses.filter(e => e.settle).slice().reverse();
+      const delRow = (e) => `<div class="foot"><button class="lnk neg" onclick="deleteExpense('${esc(e.id)}')"><i class="fa-regular fa-trash-can"></i> Xóa</button></div>`;
+
+      let h = '';
+      if (!bills.length && !settles.length) {
+        h = `<div class="empty card"><b>Chưa có khoản chi nào</b>Ghi lại khoản đầu tiên, app sẽ tự tính ai nợ ai.<br><button class="btn primary" onclick="openExp()"><i class="fa-solid fa-plus"></i> Thêm khoản chi đầu tiên</button></div>`;
+      }
+      h += bills.map(e => {
+        const det = parseSplit(e);
+        const lines = users.filter(u => Number(det[u]) > 0).map(u => `<div class="ln"><span>${esc(u)}</span><b class="num">${fmt(det[u])}đ</b></div>`).join('');
+        return `<details class="ex"><summary>${av(e.payer)}
+          <span class="mid"><b>${esc(e.desc)}</b><small>${esc(e.payer)} trả, ${fmtDate(e.at)}</small></span>
+          <span class="amt num">${fmt(e.amount)}đ</span></summary>
+          <div class="ex-body">${lines || '<div class="ln"><span>Chưa có chi tiết chia</span></div>'}${delRow(e)}</div></details>`;
+      }).join('');
+
+      if (settles.length) {
+        h += `<h2 class="sec-t">Đã settle</h2>` + settles.map(e => {
+          const det = parseSplit(e);
+          const to = Object.keys(det)[0] || '';
+          return `<details class="ex settle"><summary><span class="av"><i class="fa-solid fa-check"></i></span>
+            <span class="mid"><b>${esc(e.payer)} đã trả ${esc(to)}</b><small>${fmtDate(e.at)}</small></span>
+            <span class="amt num pos-t">${fmt(e.amount)}đ</span></summary>
+            <div class="ex-body"><div class="ln"><span>${esc(e.desc)}</span></div>${delRow(e)}</div></details>`;
+        }).join('');
+      }
+      $('expList').innerHTML = h;
+    }
+
+    function renderBalances(bal) {
+      const { users } = localData;
+      const mine = myMember();
+      if (!users.length) { $('balList').innerHTML = `<div class="empty card"><b>Chưa có ai trong nhóm</b>Thêm người chia tiền ở tab Thành viên.</div>`; return; }
+      const order = users.slice().sort((a, b) => bal.d[b] - bal.d[a]);
+      $('balList').innerHTML = order.map(u => {
+        const v = Math.round(bal.d[u]);
+        const cls = v > 0 ? 'dong' : (v < 0 ? 'nhan' : 'xong');
+        const pi = payOf(u);
+        const idx = users.indexOf(u);
+        const piLine = pi ? `<div class="pi"><i class="fa-solid ${pi.method === 'bank' ? 'fa-building-columns' : 'fa-mobile-screen'}"></i> ${esc(payText(pi))}</div>`
+          : `<div class="pi">Chưa có tài khoản nhận tiền. <button class="lnk" onclick="editPay(${idx})">Nhập</button></div>`;
+        return `<div class="bal ${cls}">${av(u, 'lg')}
+          <div class="mid"><b>${esc(u)}${u === mine ? ' (bạn)' : ''}</b>
+            <small class="num">Đã chi ${fmt(bal.p[u])}đ, dùng ${fmt(bal.s[u])}đ</small>${piLine}</div>
+          <div class="right"><span class="badge ${cls}">${v > 0 ? 'Cần đóng' : (v < 0 ? 'Sẽ nhận' : 'Xong')}</span>${v !== 0 ? `<span class="v num">${fmt(Math.abs(v))}đ</span>` : ''}</div></div>`;
+      }).join('');
+    }
+
+    function renderTable(bal) {
+      const { users, expenses } = localData;
+      $('capTitle').textContent = currentG.toUpperCase();
+      $('capDate').textContent = 'Báo cáo chia tiền, ' + new Date().toLocaleDateString('vi-VN');
       const colSpan = users.length + 4;
       $('tableHead').innerHTML = `<tr><th class="sticky-col">Khoản chi</th><th>Tổng</th>${users.map(u => `<th>${esc(u)}</th>`).join('')}<th>Người trả</th><th class="no-capture"></th></tr>`;
 
       const bills = expenses.filter(e => !e.settle);
       const settles = expenses.filter(e => e.settle);
-      const delBtn = (e) => `<td class="no-capture"><button onclick="deleteExpense('${esc(e.id)}')" class="btn-delete"><i class="fa-solid fa-trash-can"></i></button></td>`;
+      const delBtn = (e) => `<td class="no-capture"><button onclick="deleteExpense('${esc(e.id)}')" class="ibtn del" aria-label="Xóa khoản chi"><i class="fa-regular fa-trash-can"></i></button></td>`;
 
       let bdy = bills.map(e => {
         const det = parseSplit(e);
         return `<tr>
-          <td class="sticky-col text-start font-medium text-stone-600">${esc(e.desc)}</td>
-          <td class="col-money">${fmt(e.amount)}</td>
-          ${users.map(u => { const s = Number(det[u]) || 0; return `<td class="${s > 0 ? 'text-stone-900 font-semibold' : 'text-stone-300'}">${s > 0 ? fmt(s) : '-'}</td>`; }).join('')}
-          <td class="text-[10px] font-bold text-stone-400 uppercase">${esc(e.payer)}</td>
+          <td class="sticky-col">${esc(e.desc)}</td>
+          <td class="col-money num">${fmt(e.amount)}</td>
+          ${users.map(u => { const s = Number(det[u]) || 0; return `<td class="num ${s > 0 ? '' : 'tm'}">${s > 0 ? fmt(s) : '-'}</td>`; }).join('')}
+          <td class="hint">${esc(e.payer)}</td>
           ${delBtn(e)}
         </tr>`;
       }).join('');
 
       if (settles.length) {
-        bdy += `<tr class="row-sep"><td colspan="${colSpan}" class="text-start">Đã settle</td></tr>`;
+        bdy += `<tr class="row-sep"><td colspan="${colSpan}">Đã settle</td></tr>`;
         bdy += settles.map(e => {
           const det = parseSplit(e);
           return `<tr>
-            <td class="sticky-col text-start font-medium text-stone-600"><i class="fa-solid fa-handshake me-1" style="color: var(--momo);"></i>${esc(e.desc)}</td>
-            <td class="col-money">${fmt(e.amount)}</td>
+            <td class="sticky-col"><i class="fa-solid fa-handshake pos-t"></i> ${esc(e.desc)}</td>
+            <td class="col-money num">${fmt(e.amount)}</td>
             ${users.map(u => {
-              if (u === e.payer) return `<td class="text-[11px] font-semibold" style="color:#137333;">Trả ${fmt(e.amount)}</td>`;
-              if (det[u]) return `<td class="text-[11px] font-semibold" style="color:#137333;">Nhận ${fmt(det[u])}</td>`;
-              return `<td class="text-stone-300">-</td>`;
+              if (u === e.payer) return `<td class="pos-t num">Trả ${fmt(e.amount)}</td>`;
+              if (det[u]) return `<td class="pos-t num">Nhận ${fmt(det[u])}</td>`;
+              return `<td class="tm">-</td>`;
             }).join('')}
-            <td class="text-[10px] font-bold text-stone-400 uppercase">${esc(e.payer)}</td>
+            <td class="hint">${esc(e.payer)}</td>
             ${delBtn(e)}
           </tr>`;
         }).join('');
       }
       $('tableBody').innerHTML = bdy;
 
-      const { s, p, sent, recv, d } = computeBalances();
+      const { s, p, sent, recv, d } = bal;
       const fTot = bills.reduce((a, e) => a + e.amount, 0);
-      let foot = `<tr class="bg-gray-50 font-bold"><td class="sticky-col text-start text-xs">Tổng dùng</td><td class="col-money">${fmt(fTot)}</td>${users.map(u => `<td class="text-stone-900 font-bold">${fmt(s[u])}</td>`).join('')}<td></td><td class="no-capture"></td></tr>
-        <tr class="bg-gray-50 font-bold"><td class="sticky-col text-start text-xs">Đã chi</td><td>-</td>${users.map(u => `<td class="text-danger">${fmt(p[u])}</td>`).join('')}<td></td><td class="no-capture"></td></tr>`;
+      let foot = `<tr class="tf"><td class="sticky-col">Tổng dùng</td><td class="col-money num">${fmt(fTot)}</td>${users.map(u => `<td class="num">${fmt(s[u])}</td>`).join('')}<td></td><td class="no-capture"></td></tr>
+        <tr class="tf"><td class="sticky-col">Đã chi</td><td>-</td>${users.map(u => `<td class="num">${fmt(p[u])}</td>`).join('')}<td></td><td class="no-capture"></td></tr>`;
       if (settles.length) {
-        foot += `<tr class="bg-gray-50 font-bold"><td class="sticky-col text-start text-xs">Đã settle</td><td>-</td>${users.map(u => {
+        foot += `<tr class="tf"><td class="sticky-col">Đã settle</td><td>-</td>${users.map(u => {
           const net = Math.round(sent[u] - recv[u]);
-          if (net > 0) return `<td class="text-[11px]" style="color:#137333;">Đã trả ${fmt(net)}</td>`;
-          if (net < 0) return `<td class="text-[11px]" style="color:#137333;">Đã nhận ${fmt(-net)}</td>`;
-          return `<td class="text-stone-300">-</td>`;
+          if (net > 0) return `<td class="pos-t num">Đã trả ${fmt(net)}</td>`;
+          if (net < 0) return `<td class="pos-t num">Đã nhận ${fmt(-net)}</td>`;
+          return `<td class="tm">-</td>`;
         }).join('')}<td></td><td class="no-capture"></td></tr>`;
       }
-      foot += `<tr class="row-final"><td class="sticky-col text-start text-stone-800">Quyết toán</td><td></td>${users.map(u => {
+      foot += `<tr class="row-final"><td class="sticky-col">Quyết toán</td><td></td>${users.map(u => {
           const v = Math.round(d[u]);
-          if (v > 0) return `<td><span class="badge-dong">ĐÓNG: ${fmt(v)}</span></td>`;
-          if (v < 0) return `<td><span class="badge-nhan">NHẬN: ${fmt(-v)}</span></td>`;
-          return `<td><span class="badge-xong">XONG</span></td>`;
+          if (v > 0) return `<td><span class="badge dong num">ĐÓNG: ${fmt(v)}</span></td>`;
+          if (v < 0) return `<td><span class="badge nhan num">NHẬN: ${fmt(-v)}</span></td>`;
+          return `<td><span class="badge xong">XONG</span></td>`;
         }).join('')}<td></td><td class="no-capture"></td></tr>
-        <tr class="bg-gray-50"><td class="sticky-col text-start text-xs">Nhận tiền</td><td></td>${users.map(u => {
+        <tr class="tf"><td class="sticky-col">Nhận tiền</td><td></td>${users.map(u => {
           const pi = payOf(u);
-          if (!pi) return `<td class="text-stone-300 text-[11px]">-</td>`;
+          if (!pi) return `<td class="tm">-</td>`;
           return pi.method === 'bank'
-            ? `<td class="text-[10px] text-stone-500 leading-tight">${esc(pi.bankName)}<br><b>${esc(pi.bankAccount)}</b></td>`
-            : `<td class="text-[10px] text-stone-500 leading-tight">MoMo<br><b>${esc(pi.phone)}</b></td>`;
+            ? `<td class="hint" style="line-height:1.3">${esc(pi.bankName)}<br><b>${esc(pi.bankAccount)}</b></td>`
+            : `<td class="hint" style="line-height:1.3">MoMo<br><b>${esc(pi.phone)}</b></td>`;
         }).join('')}<td></td><td class="no-capture"></td></tr>`;
       $('tableFoot').innerHTML = foot;
+    }
+
+    function render() {
+      const { users } = localData;
+      const keepPayer = $('expPayer').value;
+      const mine = myMember();
+      const bal = computeBalances();
+      renderMyPay();
+      renderMembers();
+      renderHero(bal);
+      renderExpenses();
+      renderBalances(bal);
+      renderTable(bal);
+
+      $('userTags').innerHTML = users.map((u, i) => {
+        const p = payOf(u);
+        const icon = !p ? '<i class="fa-solid fa-pen"></i>'
+          : (p.method === 'bank' ? '<i class="fa-solid fa-building-columns" style="color:var(--info);"></i>' : '<i class="fa-solid fa-mobile-screen" style="color:var(--brand);"></i>');
+        return `<button type="button" onclick="editPay(${i})" title="Bấm để nhập tài khoản nhận tiền" class="chip">${av(u, 'xs')}${esc(u)}${u === mine ? ' (bạn)' : ''} ${icon}</button>`;
+      }).join('');
+
+      $('expPayer').innerHTML = '<option value="">Chọn người trả</option>' + users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
+      if (users.includes(keepPayer)) $('expPayer').value = keepPayer;
+
+      if (document.activeElement !== $('meSelect')) {
+        $('meSelect').innerHTML = '<option value="">Tôi là thành viên nào?</option>' + users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
+        $('meSelect').value = mine;
+      }
+
+      $('areaEqual').innerHTML = users.map(u => `<label><input type="checkbox" class="p-check" value="${esc(u)}" checked><span>${esc(u)}</span></label>`).join('');
+      $('areaExact').innerHTML = users.map(u => `<div class="xr"><span>${esc(u)}</span><input type="number" class="inp exact-in" data-user="${esc(u)}" data-manual="false" inputmode="numeric" oninput="handleExactInput(this)"></div>`).join('');
+      recalcExact();
 
       if (settleOpen) { transfers = sortedTransfers(); renderSettle(); }
     }
@@ -952,16 +1532,12 @@
       settleOpen = true;
       transfers = sortedTransfers();
       renderSettle();
-      const m = $('settleModal');
-      m.classList.remove('hidden');
-      m.classList.add('flex');
+      openOv('settleModal');
     }
 
     function closeSettle() {
       settleOpen = false;
-      const m = $('settleModal');
-      m.classList.add('hidden');
-      m.classList.remove('flex');
+      closeOv('settleModal');
     }
 
     function renderSettle() {
@@ -969,59 +1545,60 @@
       const mine = myMember();
 
       if (transfers.length === 0) {
-        body.innerHTML = `<div class="text-center py-8">
-          <i class="fa-solid fa-circle-check fa-3x mb-3" style="color:#137333;"></i>
-          <p class="font-semibold text-stone-700 mb-1">${localData.expenses.length ? 'Mọi người đã cân bằng, không còn ai nợ ai.' : 'Chưa có khoản chi nào.'}</p>
-        </div>`;
+        body.innerHTML = `<div class="done"><i class="fa-solid fa-circle-check"></i>
+          <b>${localData.expenses.length ? 'Cả nhóm đã cân bằng' : 'Chưa có khoản chi nào'}</b>
+          <p class="hint" style="margin-top:4px;">${localData.expenses.length ? 'Không còn ai nợ ai.' : 'Thêm khoản chi để app tính giúp bạn.'}</p></div>`;
         return;
       }
 
       const cards = transfers.map((t, i) => {
         const info = payOf(t.to);
-        const tag = t.from === mine ? '<span class="badge-dong ms-2">Bạn trả</span>' : (t.to === mine ? '<span class="badge-nhan ms-2">Bạn nhận</span>' : '');
+        const tag = t.from === mine ? '<div class="t-tag"><span class="badge dong">Bạn cần trả</span></div>' : (t.to === mine ? '<div class="t-tag"><span class="badge nhan">Bạn sẽ nhận</span></div>' : '');
         let recvLine, btns = '';
         if (!info) {
           recvLine = `Chưa có tài khoản nhận tiền của ${esc(t.to)}.`;
-          btns = `<button class="btn-soft" onclick="openPay(localData.users[${localData.users.indexOf(t.to)}])"><i class="fa-solid fa-plus"></i> Nhập thông tin của ${esc(t.to)}</button>`;
+          btns = `<button class="btn soft sm" onclick="openPay(localData.users[${localData.users.indexOf(t.to)}])"><i class="fa-solid fa-plus"></i> Nhập thông tin của ${esc(t.to)}</button>`;
         } else if (info.method === 'bank') {
-          recvLine = `<i class="fa-solid fa-building-columns me-1" style="color:#174EA6;"></i>${esc(info.bankName)} • STK <b>${esc(info.bankAccount)}</b> • ${esc(info.bankHolder)}`;
-          btns = `<button class="btn-soft" onclick="copyText('${esc(info.bankAccount)}')"><i class="fa-regular fa-copy"></i> Số tài khoản</button>
-                  <button class="btn-soft" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>`;
+          recvLine = `<i class="fa-solid fa-building-columns" style="color:var(--info);"></i> ${esc(info.bankName)}, STK <b>${esc(info.bankAccount)}</b>, ${esc(info.bankHolder)}`;
+          btns = `<button class="btn soft sm" onclick="copyText('${esc(info.bankAccount)}')"><i class="fa-regular fa-copy"></i> Số tài khoản</button>
+                  <button class="btn soft sm" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>`;
         } else {
-          recvLine = `<i class="fa-solid fa-mobile-screen me-1" style="color: var(--momo);"></i>MoMo ${info.accName ? esc(info.accName) + ' • ' : ''}<b>${esc(info.phone)}</b>`;
-          btns = `<a class="btn-momo" href="${momoLink(info.phone, t.amount)}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Mở link MoMo</a>
-                  <button class="btn-soft" onclick="copyText('${esc(info.phone)}')"><i class="fa-regular fa-copy"></i> SĐT</button>
-                  <button class="btn-soft" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>`;
+          recvLine = `<i class="fa-solid fa-mobile-screen" style="color:var(--brand);"></i> MoMo ${info.accName ? esc(info.accName) + ', ' : ''}<b>${esc(info.phone)}</b>`;
+          btns = `<a class="btn momo sm" href="${momoLink(info.phone, t.amount)}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Mở MoMo</a>
+                  <button class="btn soft sm" onclick="copyText('${esc(info.phone)}')"><i class="fa-regular fa-copy"></i> SĐT</button>
+                  <button class="btn soft sm" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>`;
         }
-        return `<div class="border rounded-2xl p-3 mb-3">
-          <div class="flex items-center justify-between gap-2">
-            <div class="text-sm"><b>${esc(t.from)}</b> <i class="fa-solid fa-arrow-right mx-1 text-stone-400"></i> <b>${esc(t.to)}</b>${tag}</div>
-            <div class="col-money">${fmt(t.amount)} đ</div>
+        return `<div class="tcard ${t.from === mine ? 'me' : ''}">
+          <div class="t-head">
+            <div class="t-who">${av(t.from, 'xs')}${esc(t.from)} <i class="fa-solid fa-arrow-right"></i> ${av(t.to, 'xs')}${esc(t.to)}</div>
+            <div class="t-amt num">${fmt(t.amount)}đ</div>
           </div>
-          <div class="text-[12px] text-stone-600 mt-2">${recvLine}</div>
-          <div class="flex flex-wrap gap-2 mt-2">
+          ${tag}
+          <div class="t-recv">${recvLine}</div>
+          <div class="t-act">
             ${btns}
-            <button class="btn-ok" onclick="markPaid(${i})"><i class="fa-solid fa-check"></i> Đã trả</button>
+            <button class="btn ok sm" onclick="markPaid(${i})"><i class="fa-solid fa-check"></i> Đã trả</button>
           </div>
         </div>`;
       }).join('');
 
-      body.innerHTML = `<p class="text-[11px] text-stone-500 mb-3">${transfers.length} giao dịch là đủ để cả nhóm hết nợ. Chuyển xong thì bấm <b>Đã trả</b> để ghi nhận vào bảng.</p>
+      body.innerHTML = `<p class="hint" style="margin-bottom:12px;">Chỉ cần ${transfers.length} giao dịch là cả nhóm hết nợ. Chuyển xong thì bấm <b>Đã trả</b> để ghi vào bảng.</p>
         ${cards}
-        <button class="btn-soft w-full justify-center" onclick="copySummary()"><i class="fa-regular fa-copy"></i> Sao chép tóm tắt để gửi nhóm</button>`;
+        <button class="btn soft block" onclick="copySummary()"><i class="fa-regular fa-copy"></i> Sao chép tóm tắt để gửi nhóm</button>`;
     }
 
     async function markPaid(i) {
       const t = transfers[i];
       if (!t) return;
-      if (!confirm(`Xác nhận ${t.from} đã chuyển ${fmt(t.amount)}đ cho ${t.to}?`)) return;
-      await mutate({
+      if (!(await uiConfirm(`${t.from} đã chuyển ${fmt(t.amount)}đ cho ${t.to}?`, { title: 'Ghi nhận đã trả', ok: 'Đã chuyển', cancel: 'Chưa' }))) return;
+      const ok = await mutate({
         action: 'addExpense', id: uid(),
         desc: `Settle: ${t.from} → ${t.to}`,
         amount: t.amount, payer: t.from,
         splitDetails: JSON.stringify({ [t.to]: t.amount }),
         settle: true
       });
+      if (ok) toast('Đã ghi nhận');
     }
 
     function copySummary() {
@@ -1034,7 +1611,11 @@
 
     // ---------- Xuất ảnh ----------
     async function downloadTable() {
+      if (typeof html2canvas === 'undefined') { toast('Chưa tải được công cụ xuất ảnh. Kiểm tra mạng rồi thử lại.', 'err'); return; }
+      const prevTab = curTab;
+      setTab('table');
       showLoad(true);
+      await new Promise((r) => setTimeout(r, 60));
       const captureArea = $('captureArea');
       const tableContainer = $('tContainer');
       const mainTable = $('mainTable');
@@ -1047,7 +1628,7 @@
 
       tableContainer.style.overflow = 'visible';
       tableContainer.style.width = 'auto';
-      captureArea.style.width = (mainTable.offsetWidth + 100) + 'px';
+      captureArea.style.width = (mainTable.offsetWidth + 60) + 'px';
 
       try {
         const canvas = await html2canvas(captureArea, {
@@ -1058,13 +1639,15 @@
         link.download = `Bill_${currentG}_${new Date().getTime()}.jpg`;
         link.href = canvas.toDataURL("image/jpeg", 0.9);
         link.click();
-      } catch (e) { alert("Lỗi xuất ảnh!"); }
+        toast('Đã lưu ảnh bảng');
+      } catch (e) { toast('Không xuất được ảnh, thử lại sau', 'err'); }
       finally {
         stickyCols.forEach(col => col.classList.remove('no-sticky'));
         noCaptureItems.forEach(item => item.style.display = '');
         tableContainer.style.cssText = oldStyle.container;
         captureArea.style.cssText = oldStyle.area;
         showLoad(false);
+        if (prevTab !== 'table') setTab(prevTab);
       }
     }
   </script>
