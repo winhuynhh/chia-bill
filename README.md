@@ -1,66 +1,87 @@
-# Billing Master v2 (Vercel)
+# Billing Master v3 (Vercel)
 
 Chia tiền nhóm, chạy trên Vercel Serverless + Redis/KV.
 
-- **Đăng nhập chỉ bằng Google.** Không cần đăng nhập MoMo hay ngân hàng.
-- **Lần đầu đăng nhập bắt buộc đăng ký tài khoản nhận tiền** (MoMo hoặc ngân hàng). Chưa đăng ký thì chưa dùng được app.
-- **Settle up** hiện ai chuyển cho ai bao nhiêu, kèm thông tin nhận tiền của người nhận (MoMo hoặc ngân hàng).
+## Tính năng
+
+- **Đăng nhập Google**, lần đầu bắt buộc đăng ký **tài khoản nhận tiền** (MoMo hoặc ngân hàng).
+- **Nhóm theo thành viên** (không còn "ai biết mã là vào được"):
+  - Ai tạo nhóm thì **tự động là trưởng nhóm và thành viên** của nhóm đó.
+  - Trưởng nhóm **mời qua email**. Người được mời nhận email có **link + mã nhóm**.
+  - Người được mời đăng nhập Google bằng đúng email đó, thấy mục **Lời mời**, bấm **Đồng ý** mới được tính là thành viên (hoặc **Từ chối**).
+  - Mỗi người chỉ thấy các nhóm mình **đã tham gia** và các **lời mời đang chờ**.
+- **Admin** (`nghiahnt.dn@gmail.com`): thấy **tất cả nhóm**, mở và chỉnh sửa mọi nhóm, **đổi mã nhóm**, **xóa nhóm**.
+- **Settle up**: ai chuyển cho ai bao nhiêu (ít giao dịch nhất), kèm thông tin MoMo/ngân hàng của người nhận, nút "Đã trả" để ghi nhận.
+
+| Việc | Admin | Trưởng nhóm | Thành viên | Người được mời (chưa đồng ý) |
+|---|---|---|---|---|
+| Xem / nhập hóa đơn, Settle up | ✔ | ✔ | ✔ | ✘ |
+| Mời / huỷ lời mời | ✔ | ✔ | ✘ | ✘ |
+| Đổi mã / xóa nhóm | ✔ | ✘ | ✘ | ✘ |
 
 ```
 billing-master/
 ├── public/index.html     giao diện
-├── api/_lib.js           ký/verify session, kiểm tra SĐT, kiểm tra thông tin nhận tiền (không phải route)
+├── api/_lib.js           session, quyền admin/trưởng nhóm, kiểm tra thông tin nhận tiền (không phải route)
+├── api/_mail.js          gửi email lời mời qua SMTP (không phải route)
 ├── api/config.js         trả GOOGLE_CLIENT_ID cho giao diện
 ├── api/auth.js           xác minh Google token -> cấp session token
-├── api/profile.js        đọc/lưu tài khoản nhận tiền của người đăng nhập
-├── api/data.js           dữ liệu nhóm (cần đăng nhập)
+├── api/profile.js        tài khoản nhận tiền của người đăng nhập
+├── api/groups.js         tạo nhóm, mời, đồng ý/từ chối, admin đổi mã/xóa
+├── api/data.js           dữ liệu chia tiền của nhóm (chỉ thành viên/admin)
 └── package.json
 ```
 
-## Cấu hình bắt buộc (làm 1 lần)
+## Cấu hình (làm 1 lần trên Vercel: Settings → Environment Variables)
 
-### 1. Tạo Google OAuth Client ID
-1. Vào https://console.cloud.google.com → tạo project mới (hoặc dùng project có sẵn).
-2. **APIs & Services → OAuth consent screen**: chọn *External*, điền tên app + email hỗ trợ, lưu.
-   Sau đó bấm **Publish app** (chuyển sang *In production*). Nếu để *Testing*, chỉ các email trong danh sách Test users mới đăng nhập được.
-   App chỉ xin quyền cơ bản (email, profile) nên không cần Google xét duyệt.
-3. **APIs & Services → Credentials → Create credentials → OAuth client ID** → loại **Web application**.
-4. Mục **Authorized JavaScript origins** thêm domain Vercel của bạn, ví dụ `https://billing-master-xxxx.vercel.app`
-   (thêm `http://localhost:3000` nếu muốn chạy thử local). Không cần Redirect URI.
-5. Copy **Client ID** (dạng `xxxx.apps.googleusercontent.com`).
+| Tên | Bắt buộc | Giá trị |
+|---|---|---|
+| `GOOGLE_CLIENT_ID` | có | OAuth Client ID (xem bước 1) |
+| `SESSION_SECRET` | có | chuỗi ngẫu nhiên dài (≥ 32 ký tự) |
+| `SMTP_USER` | để gửi email | Gmail dùng để gửi lời mời, vd `nghiahnt.dn@gmail.com` |
+| `SMTP_PASS` | để gửi email | **App Password** 16 ký tự của Gmail đó (xem bước 2) |
+| `SMTP_HOST` / `SMTP_PORT` | không | mặc định `smtp.gmail.com` / `465` |
+| `MAIL_FROM` | không | tên hiển thị người gửi, mặc định `Billing Master <SMTP_USER>` |
+| `APP_URL` | không | domain app, vd `https://billing-master.vercel.app` (mặc định tự lấy theo domain đang truy cập) |
+| `ADMIN_EMAILS` | không | danh sách email admin, cách nhau bằng dấu phẩy (mặc định `nghiahnt.dn@gmail.com`) |
 
-### 2. Thêm biến môi trường trên Vercel
-Project → **Settings → Environment Variables**, thêm:
+Ngoài ra project cần database Redis/KV (có sẵn `KV_REST_API_URL`, `KV_REST_API_TOKEN`).
 
-| Tên | Giá trị |
-|---|---|
-| `GOOGLE_CLIENT_ID` | Client ID vừa copy |
-| `SESSION_SECRET` | chuỗi ngẫu nhiên dài, tạo bằng `openssl rand -base64 32` |
+### 1. Google OAuth Client ID
+1. https://console.cloud.google.com → tạo project → **APIs & Services → OAuth consent screen**: *External*, điền tên app + email hỗ trợ, lưu, rồi **Publish app** (In production) để ai cũng đăng nhập được.
+2. **Credentials → Create credentials → OAuth client ID → Web application**.
+3. **Authorized JavaScript origins**: thêm domain Vercel, vd `https://billing-master-xxxx.vercel.app`. Không cần Redirect URI.
+4. Copy **Client ID** vào `GOOGLE_CLIENT_ID`.
 
-Cùng chỗ đó kiểm tra có `KV_REST_API_URL` và `KV_REST_API_TOKEN` (do database Redis/KV tự thêm).
+### 2. Gmail App Password (để app gửi email lời mời)
+1. Đăng nhập Gmail dùng để gửi (vd `nghiahnt.dn@gmail.com`) → https://myaccount.google.com/security → bật **Xác minh 2 bước** nếu chưa bật.
+2. Vào https://myaccount.google.com/apppasswords → đặt tên "Billing Master" → **Create** → copy chuỗi 16 ký tự.
+3. Dán vào `SMTP_PASS` (có khoảng trắng cũng được), `SMTP_USER` là địa chỉ Gmail đó.
+4. Gmail miễn phí gửi được khoảng 500 email/ngày, quá đủ cho app này.
 
-### 3. Redeploy
-Đẩy code mới lên GitHub (upload đè lên file cũ, nhớ có thêm các file mới trong `api/`), rồi **Deployments → Redeploy** để biến môi trường có hiệu lực.
+**Chưa cấu hình email?** App vẫn chạy: lời mời vẫn được tạo (người được mời vẫn thấy khi đăng nhập), giao diện sẽ hiện nút **Sao chép lời mời** để trưởng nhóm gửi link + mã qua Zalo/Messenger.
+
+### 3. Deploy
+Upload đè code lên GitHub (có file mới trong `api/`, và `package.json` có thêm `nodemailer`), rồi **Redeploy**.
 
 ## Cách dùng
-1. Đăng nhập Google. Lần đầu sẽ hiện form **Đăng ký tài khoản nhận tiền**: chọn **MoMo** (SĐT + tên MoMo) hoặc **Ngân hàng** (tên ngân hàng, số tài khoản, tên chủ tài khoản). Sửa lại bất cứ lúc nào ở nút "Tài khoản nhận tiền" trên thanh trên cùng.
-2. Nhập mã nhóm, thêm thành viên, chọn "Tôi là thành viên nào?" để gắn tài khoản Google của bạn với tên trong nhóm. Thông tin nhận tiền của bạn sẽ tự đồng bộ vào nhóm.
-3. Thành viên chưa tự đăng nhập: bấm vào tên họ để nhập hộ tài khoản nhận tiền.
-4. Nhập hóa đơn như cũ.
-5. Bấm **SETTLE UP** để xem ai chuyển cho ai. Mỗi dòng hiện thông tin nhận tiền của người nhận:
-   - MoMo: SĐT, tên, nút mở link MoMo, nút sao chép SĐT / số tiền.
-   - Ngân hàng: tên ngân hàng, số tài khoản, chủ tài khoản, nút sao chép số tài khoản / số tiền.
-   Chuyển xong bấm **Đã trả** để ghi vào mục "Đã settle" của bảng và trừ vào quyết toán.
+1. Đăng nhập Google, đăng ký tài khoản nhận tiền (lần đầu).
+2. **Tạo nhóm mới** (đặt mã nhóm, vd `di-da-lat`) → bạn là trưởng nhóm.
+3. Trong nhóm, mục **Tài khoản đã tham gia nhóm** → nhập email người cần mời → **Gửi lời mời**.
+4. Người được mời mở email, bấm link (hoặc vào app) → đăng nhập Google bằng **đúng email được mời** → **Đồng ý**.
+5. Nhập hóa đơn, cuối kỳ bấm **SETTLE UP**.
 
 ## Lưu ý
-- Mã nhóm vẫn là "chìa khóa chung": ai đã đăng nhập và biết mã nhóm đều xem/sửa được nhóm đó, kể cả xem số tài khoản của các thành viên.
-- Link MoMo trong Settle up có dạng `https://nhantien.momo.vn/<SĐT>/<số tiền>`. Nếu MoMo đổi định dạng, chỉ cần sửa hàm `momoLink()` trong `public/index.html`. Nút sao chép luôn dùng được.
-- App không tự chuyển tiền; việc chuyển tiền do người dùng làm trong MoMo / app ngân hàng, app chỉ ghi nhận.
+- Lời mời gắn với **email Google**. Người được mời phải đăng nhập bằng đúng email mà trưởng nhóm đã nhập.
+- Dữ liệu nhóm tạo từ các bản trước (chưa có thành viên) sẽ không hiện trong danh sách nhóm. Hãy tạo lại nhóm; nếu trùng mã với nhóm cũ sẽ báo "Mã nhóm đã tồn tại", hãy đặt mã khác.
+- Link MoMo trong Settle up có dạng `https://nhantien.momo.vn/<SĐT>/<số tiền>`; nếu MoMo đổi định dạng chỉ cần sửa hàm `momoLink()` trong `public/index.html`.
+- App không tự chuyển tiền; người dùng chuyển trong MoMo / app ngân hàng, app chỉ ghi nhận.
 
 ## API
-Mọi request cần header `Authorization: Bearer <token>` (token lấy từ `POST /api/auth`).
+Mọi request (trừ `/api/config`, `/api/auth`) cần header `Authorization: Bearer <token>`.
 
 - `POST /api/auth` `{ credential }` → `{ token, user, profile }`
-- `GET /api/profile`, `POST /api/profile` `{ pay }` với `pay = { method:'momo', phone, accName? }` hoặc `{ method:'bank', bankName, bankAccount, bankHolder }`
-- `GET /api/data?groupId=abc` → `{ users, expenses, payInfo, links }`
-- `POST /api/data` với `action` là `addUser` | `addExpense` | `deleteExpense` | `setPayInfo` (`{ memberName, pay }`, `pay` rỗng để xóa) | `linkMe`
+- `GET /api/profile`, `POST /api/profile` `{ pay }`
+- `GET /api/groups` → `{ isAdmin, groups, invites, all? }` (`all` chỉ có với admin)
+- `POST /api/groups` với `action`: `create` | `accept` | `decline` | `invite` (`emails`) | `cancelInvite` (`email`) | `rename` (`newCode`, admin) | `delete` (admin)
+- `GET /api/data?groupId=...`, `POST /api/data` với `action`: `addUser` | `addExpense` | `deleteExpense` | `setPayInfo` | `linkMe`

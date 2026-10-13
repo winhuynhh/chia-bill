@@ -1,11 +1,12 @@
 {
   "name": "billing-master",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
-  "description": "Billing Master - chia tiền nhóm, đăng nhập Google, Settle up (Vercel Serverless + Redis/KV)",
+  "description": "Billing Master - chia tiền nhóm: đăng nhập Google, nhóm theo lời mời email, Settle up (Vercel Serverless + Redis/KV)",
   "engines": { "node": ">=18" },
   "dependencies": {
-    "@vercel/kv": "^1.0.1"
+    "@vercel/kv": "^1.0.1",
+    "nodemailer": "^6.9.14"
   }
 }
