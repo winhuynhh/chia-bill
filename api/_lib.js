@@ -1,0 +1,84 @@
+import crypto from 'node:crypto';
+
+// File bắt đầu bằng "_" không được Vercel coi là một API route.
+
+const b64u = (s) => Buffer.from(s).toString('base64url');
+const clip = (v, n) => String(v || '').trim().slice(0, n);
+
+function hmac(body) {
+  return crypto.createHmac('sha256', process.env.SESSION_SECRET).update(body).digest('base64url');
+}
+
+// Session token tự ký (HMAC-SHA256), không cần thư viện ngoài.
+export function signSession(payload, ttlSec = 60 * 60 * 24 * 30) {
+  if (!process.env.SESSION_SECRET) throw new Error('Thiếu biến môi trường SESSION_SECRET');
+  const body = b64u(JSON.stringify({ ...payload, exp: Math.floor(Date.now() / 1000) + ttlSec }));
+  return `${body}.${hmac(body)}`;
+}
+
+export function verifySession(token) {
+  if (!process.env.SESSION_SECRET || !token) return null;
+  const [body, sig] = String(token).split('.');
+  if (!body || !sig) return null;
+  const a = Buffer.from(sig);
+  const b = Buffer.from(hmac(body));
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  try {
+    const p = JSON.parse(Buffer.from(body, 'base64url').toString());
+    if (!p.exp || p.exp < Date.now() / 1000) return null;
+    return p;
+  } catch {
+    return null;
+  }
+}
+
+// Trả về payload user, hoặc tự gửi 401 và trả null.
+export function requireUser(req, res) {
+  const h = req.headers.authorization || '';
+  const user = verifySession(h.startsWith('Bearer ') ? h.slice(7) : '');
+  if (!user) {
+    res.status(401).json({ error: 'Chưa đăng nhập hoặc phiên đã hết hạn' });
+    return null;
+  }
+  return user;
+}
+
+// SĐT Việt Nam 10 số bắt đầu bằng 0. Chấp nhận +84 / 84. Trả null nếu sai.
+export function normalizePhone(raw) {
+  let p = String(raw || '').replace(/[\s.\-()]/g, '');
+  if (p.startsWith('+84')) p = '0' + p.slice(3);
+  else if (p.startsWith('84') && p.length === 11) p = '0' + p.slice(2);
+  return /^0\d{9}$/.test(p) ? p : null;
+}
+
+// Thông tin nhận tiền: hoặc MoMo, hoặc tài khoản ngân hàng.
+// Trả { value } nếu hợp lệ, { error } nếu sai.
+export function sanitizePay(raw) {
+  if (!raw || typeof raw !== 'object') return { error: 'Thiếu thông tin nhận tiền' };
+
+  if (raw.method === 'momo') {
+    const phone = normalizePhone(raw.phone);
+    if (!phone) return { error: 'SĐT MoMo không hợp lệ (cần 10 số, bắt đầu bằng 0)' };
+    return { value: { method: 'momo', phone, accName: clip(raw.accName, 60) } };
+  }
+
+  if (raw.method === 'bank') {
+    const bankName = clip(raw.bankName, 60);
+    const bankAccount = String(raw.bankAccount || '').replace(/[\s.\-]/g, '');
+    const bankHolder = clip(raw.bankHolder, 60).toUpperCase();
+    if (!bankName) return { error: 'Chưa nhập tên ngân hàng' };
+    if (!/^\d{4,24}$/.test(bankAccount)) return { error: 'Số tài khoản không hợp lệ (chỉ gồm 4-24 chữ số)' };
+    if (!bankHolder) return { error: 'Chưa nhập tên chủ tài khoản' };
+    return { value: { method: 'bank', bankName, bankAccount, bankHolder } };
+  }
+
+  return { error: 'Hãy chọn MoMo hoặc Ngân hàng' };
+}
+
+// Lấy thông tin nhận tiền từ profile (có fallback cho dữ liệu cũ chỉ có SĐT MoMo).
+export function profilePay(profile) {
+  if (!profile) return null;
+  if (profile.pay && (profile.pay.method === 'momo' || profile.pay.method === 'bank')) return profile.pay;
+  if (profile.momoPhone) return { method: 'momo', phone: profile.momoPhone, accName: profile.momoName || '' };
+  return null;
+}
