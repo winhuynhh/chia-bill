@@ -202,6 +202,10 @@
     .sw input:checked + .track { background: var(--brand); }
     .sw input:checked + .track::after { transform: translateX(20px); }
     .sw input:focus-visible + .track { outline: 3px solid rgba(176,18,95,.45); outline-offset: 2px; }
+.jopt { display:flex; align-items:center; gap:10px; padding:12px; border:1.5px solid var(--line); border-radius: var(--r-md); margin-bottom:8px; cursor:pointer; font-weight:600; font-size:14.5px; }
+    .jopt:has(input:checked) { border-color: var(--brand); background: #FFFAFD; }
+    .jopt input { accent-color: var(--brand); width:18px; height:18px; flex:none; }
+    .jopt span { min-width:0; }
     .fab { position: fixed; right: max(16px, calc(50% - 364px)); bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 45; height: 56px; padding: 0 22px 0 18px; border-radius: 999px; background: var(--brand); color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 24px rgba(176,18,95,.4); transition: transform .12s, background .15s; }
     .fab:hover { background: var(--brand-d); }
     .fab:active { transform: scale(.96); }
@@ -510,6 +514,12 @@
             <label class="field" style="margin-top:10px;"><span>Người này đã được nhập tay trong nhóm?</span><select id="inviteAs" class="sel"></select></label>
             <p class="hint" style="margin-top:6px;">Chọn tên tạm (hoặc tên người đã rời, nếu họ quay lại bằng email mới) khi có, khi họ đồng ý thì các khoản chi cũ tự gắn vào tài khoản Google của họ. Chỉ chọn khi mời đúng 1 email.</p>
             <button onclick="sendInvites()" class="btn primary block" style="margin-top:10px;"><i class="fa-solid fa-paper-plane"></i> Gửi lời mời</button>
+            <div class="sub-t">Hoặc gửi link tham gia</div>
+            <p class="hint" style="margin-bottom:8px;">Ai mở link này và đăng nhập đều vào được nhóm, kể cả khi dùng email khác. Họ sẽ được hỏi có phải một người đã nhập tay không.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn soft sm" onclick="copyJoinLink()"><i class="fa-regular fa-copy"></i> Sao chép link</button>
+              <button class="btn soft sm" onclick="resetJoinLink()"><i class="fa-solid fa-rotate"></i> Tạo link mới</button>
+            </div>
             <div id="inviteResult" style="margin-top:12px;"></div>
             <div id="pendingInvites" style="margin-top:12px;"></div>
           </div>
@@ -614,6 +624,19 @@
     </div>
   </div>
 
+  <!-- Vào nhóm bằng link: chọn mình có phải người đã nhập tay không -->
+  <div id="joinSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="joinTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="joinTitle">Tham gia nhóm</h3><button class="ibtn" onclick="closeJoin()" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <div id="joinBody" style="margin-top:8px;"></div>
+      <div style="display:flex;gap:8px;margin-top:18px;">
+        <button class="btn soft" onclick="closeJoin()">Hủy</button>
+        <button id="joinGo" class="btn primary" style="flex:1;" onclick="confirmJoin()"><i class="fa-solid fa-check"></i> Tham gia nhóm</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Hộp thoại xác nhận / nhập -->
   <div id="dlg" class="ov" role="alertdialog" aria-modal="true" aria-labelledby="dlgTitle">
     <div class="sheet dlgbox">
@@ -650,7 +673,8 @@
     let filt = { mode: 'all', from: '', to: '' };
     // Link mời trong email có dạng /?invite=<mã nhóm>
     let deepLink = '';
-    try { const q = new URLSearchParams(location.search); deepLink = (q.get('invite') || q.get('g') || '').trim().toLowerCase().replace(/\s+/g, '-'); } catch (e) {}
+    let deepKey = '';
+    try { const q = new URLSearchParams(location.search); deepLink = (q.get('invite') || q.get('g') || '').trim().toLowerCase().replace(/\s+/g, '-'); deepKey = (q.get('k') || '').trim(); } catch (e) {}
 
     const $ = (id) => document.getElementById(id);
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -710,7 +734,7 @@
     }
 
     // ---------- Lớp phủ dùng chung ----------
-    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet'];
+    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet'];
     function syncLock() { document.body.classList.toggle('lock', OVERLAYS.some((id) => $(id).classList.contains('open'))); }
     function openOv(id, blocking) {
       const el = $(id);
@@ -724,6 +748,7 @@
       if (id === 'dlg') dlgClose(null);
       else if (id === 'payModal') closePay();
       else if (id === 'settleModal') closeSettle();
+      else if (id === 'joinSheet') closeJoin();
       else closeExp();
     }));
     document.addEventListener('keydown', (ev) => {
@@ -733,7 +758,7 @@
         const el = $(id);
         if (!el.classList.contains('open')) continue;
         if (id === 'dlg') dlgClose(null);
-        else if (!el.dataset.block) { if (id === 'payModal') closePay(); else if (id === 'settleModal') closeSettle(); else closeExp(); }
+        else if (!el.dataset.block) { if (id === 'payModal') closePay(); else if (id === 'settleModal') closeSettle(); else if (id === 'joinSheet') closeJoin(); else closeExp(); }
         return;
       }
     });
@@ -1005,7 +1030,8 @@
     function handleDeepLink() {
       if (!deepLink) return;
       const c = deepLink;
-      deepLink = '';
+      const key = deepKey;
+      deepLink = ''; deepKey = '';
       try { history.replaceState(null, '', location.pathname); } catch (_) {}
       if (homeData.groups.some(g => g.code === c)) { openGroup(c); return; }
       const ii = homeData.invites.findIndex(v => v.code === c);
@@ -1015,7 +1041,60 @@
         toast(`Bạn được mời vào nhóm "${c}". Bấm Đồng ý để tham gia.`);
         return;
       }
-      toast('Bạn chưa được mời vào nhóm này. Hãy đăng nhập đúng email được mời.', 'err');
+      if (key) { showJoin(c, key); return; }
+      toast('Bạn chưa được mời vào nhóm này. Hãy đăng nhập đúng email được mời, hoặc xin trưởng nhóm link tham gia.', 'err');
+    }
+
+    // ---------- Vào nhóm bằng link / email khác ----------
+    let joinState = null;
+
+    async function showJoin(code, key) {
+      showLoad(true);
+      try {
+        const p = await api('/api/groups?preview=' + encodeURIComponent(code) + '&k=' + encodeURIComponent(key));
+        if (p.alreadyMember) { await openGroup(p.code); return; }
+        joinState = { code: p.code, key, sel: p.suggested || '' };
+        $('joinTitle').textContent = `Tham gia nhóm ${p.code.toUpperCase()}`;
+        const opts = p.names.map(n => `<label class="jopt"><input type="radio" name="joinAs" value="${esc(n.name)}" ${n.name === joinState.sel ? 'checked' : ''}>${av(n.name, 'xs')}<span>${esc(n.name)}${n.left ? ' <span class="hint">(đã rời nhóm)</span>' : ''}</span></label>`).join('');
+        $('joinBody').innerHTML = `<p class="sub" style="margin-bottom:12px;">${p.names.length
+          ? `Nhóm đang có ${p.names.length} tên chưa gắn với tài khoản nào. Bạn có phải một trong số họ không? Chọn đúng tên để nhận lại các khoản chi đã ghi.`
+          : 'Nhóm chưa có tên nhập tay nào chưa gắn tài khoản. Bạn sẽ vào như một người mới.'}${p.returning ? ' Bạn từng ở trong nhóm này nên mình đã chọn sẵn tên cũ của bạn.' : ''}</p>
+          ${opts}
+          <label class="jopt"><input type="radio" name="joinAs" value="" ${joinState.sel ? '' : 'checked'}>${av(p.myName, 'xs')}<span>Tôi là người mới, dùng tên "${esc(p.myName)}"</span></label>`;
+        openOv('joinSheet');
+      } catch (e) { fail(e); }
+      finally { showLoad(false); }
+    }
+
+    function closeJoin() { closeOv('joinSheet'); joinState = null; }
+
+    async function confirmJoin() {
+      if (!joinState) return;
+      const sel = document.querySelector('input[name="joinAs"]:checked');
+      const asName = sel ? sel.value : '';
+      showLoad(true);
+      try {
+        const r = await api('/api/groups', { method: 'POST', body: { action: 'join', code: joinState.code, k: joinState.key, asName } });
+        closeJoin();
+        toast(asName ? `Đã tham gia, bạn đang dùng tên "${asName}"` : 'Đã tham gia nhóm');
+        showLoad(false);
+        await openGroup(r.code);
+      } catch (e) { fail(e); showLoad(false); }
+    }
+
+    async function copyJoinLink() {
+      try {
+        const r = await api('/api/groups', { method: 'POST', body: { action: 'joinLink', code: currentG } });
+        copyText(r.link);
+      } catch (e) { fail(e); }
+    }
+
+    async function resetJoinLink() {
+      if (!(await uiConfirm('Link cũ sẽ không dùng được nữa. Những người đã vào nhóm không bị ảnh hưởng.', { title: 'Tạo link mới?', ok: 'Tạo link mới', cancel: 'Giữ link cũ', danger: true }))) return;
+      try {
+        const r = await api('/api/groups', { method: 'POST', body: { action: 'resetJoinLink', code: currentG } });
+        copyText(r.link);
+      } catch (e) { fail(e); }
     }
 
     async function createGroup() {

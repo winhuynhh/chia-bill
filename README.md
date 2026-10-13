@@ -11,6 +11,7 @@ Chia tiền nhóm, chạy trên Vercel Serverless + Redis/KV.
   - Người được mời đăng nhập Google bằng đúng email đó, thấy mục **Lời mời**, bấm **Đồng ý** mới được tính là thành viên (hoặc **Từ chối**).
   - Mỗi người chỉ thấy các nhóm mình **đã tham gia** và các **lời mời đang chờ**.
 - **Admin** (`nghiahnt.dn@gmail.com`): thấy **tất cả nhóm**, mở và chỉnh sửa mọi nhóm, **đổi mã nhóm**, **xóa nhóm**.
+- **Hai cách vào nhóm**: (1) mời qua email: người được mời chỉ cần đăng nhập đúng email đó và bấm Đồng ý; (2) link tham gia (cũng là link trong email, dạng `/?invite=<mã>&k=<khóa>`): ai mở link và đăng nhập, kể cả bằng email khác, sẽ thấy popup hỏi có phải một người đã nhập tay (hoặc đã rời nhóm) không để nhận lại các khoản chi cũ, hoặc vào như người mới. Trưởng nhóm sao chép link hoặc bấm *Tạo link mới* (link cũ hết hiệu lực) ở tab Thành viên.
 - **Gắn tên nhập tay với tài khoản Google**: khi mời email, trưởng nhóm chọn "Đúng, họ là <tên tạm>"; người đó đồng ý thì các khoản chi cũ tự gắn vào tài khoản của họ. Nếu không chọn, app vẫn tự khớp khi tên Google trùng tên đã nhập (không phân biệt hoa thường, dấu). Người tham gia cũng có thể tự chọn lại tên trong tab Thành viên, mục "Bạn là ai trong nhóm?", để gộp lịch sử.
 - **Sửa giao dịch và quyền thành viên**: ai có quyền thì bấm Sửa ở từng khoản chi (hoặc biểu tượng bút trong tab Bảng). Trưởng nhóm có 2 công tắc trong tab Thành viên: *Cho phép thêm khoản chi* (mặc định bật) và *Cho phép sửa và xóa giao dịch* (mặc định tắt). Trưởng nhóm và admin luôn có đủ quyền. Ghi nhận "Đã trả" khi settle luôn dùng được.
 - **Quay lại sau khi rời**: cùng tài khoản hoặc cùng email thì tự nối lại đúng tên và lịch sử cũ. Nếu quay lại bằng email mới, trưởng nhóm chọn "Đúng, họ là <tên> (đã rời nhóm)" lúc mời, hoặc người đó tự chọn lại tên trong tab Thành viên để gộp.
@@ -89,6 +90,7 @@ Mọi request (trừ `/api/config`, `/api/auth`) cần header `Authorization: Be
 
 - `POST /api/auth` `{ credential }` → `{ token, user, profile }`
 - `GET /api/profile`, `POST /api/profile` `{ pay }`
+- `GET /api/groups?preview=<mã>&k=<khóa>` → xem trước nhóm khi vào bằng link
 - `GET /api/groups` → `{ isAdmin, groups, invites, all? }` (`all` chỉ có với admin)
-- `POST /api/groups` với `action`: `create` | `accept` | `decline` | `invite` (`emails`, `asName`) | `cancelInvite` (`email`) | `settings` (`memberCanAdd`, `memberCanEdit`) | `leave` | `rename` (`newCode`, admin) | `delete` (trưởng nhóm hoặc admin)
+- `POST /api/groups` với `action`: `create` | `accept` | `decline` | `invite` (`emails`, `asName`) | `cancelInvite` (`email`) | `settings` (`memberCanAdd`, `memberCanEdit`) | `join` (`k`, `asName`) | `joinLink` | `resetJoinLink` | `leave` | `rename` (`newCode`, admin) | `delete` (trưởng nhóm hoặc admin)
 - `GET /api/data?groupId=...`, `POST /api/data` với `action`: `addUser` | `addExpense` | `deleteExpense` | `editExpense` | `setPayInfo` | `linkMe` | `claim`

@@ -1,4 +1,5 @@
 import { kv } from '@vercel/kv';
+import crypto from 'node:crypto';
 import {
   requireUser, isAdmin, canManage, groupSettings, normCode, isEmail, cs, unCs, appUrl, profilePay,
 } from './_lib.js';
@@ -11,6 +12,12 @@ import { sendInviteMail, mailConfigured, inviteText } from './_mail.js';
 //   invites:<email>     set mã nhóm đang mời email này (chờ đồng ý)
 //   profile:<sub>       hồ sơ + tài khoản nhận tiền
 
+const newToken = () => crypto.randomBytes(9).toString('base64url');
+const tokenOk = (g, k) => {
+  if (!g?.joinToken || typeof k !== 'string' || k.length !== g.joinToken.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(k), Buffer.from(g.joinToken));
+};
+const joinLinkOf = (req, g, code) => `${appUrl(req)}/?invite=${encodeURIComponent(code)}&k=${g.joinToken}`;
 const gkey = (c) => `group:${c}`;
 const ukey = (sub) => `usergroups:${sub}`;
 const ikey = (email) => `invites:${email}`;
@@ -56,17 +63,19 @@ function addMember(g, user, profile, asName) {
   const em = String(user.email || '').toLowerCase();
   const prevKey = g.left?.[user.sub] ? user.sub : Object.keys(g.left || {}).find((k) => String(g.left[k].email || '').toLowerCase() === em);
   const prev = prevKey ? g.left[prevKey] : null;
+  const useAs = !!(asName && free(asName));
   if (prev) {
-    name = prev.name;
     delete g.left[prevKey];
     if (prevKey !== user.sub) delete g.links?.[prevKey];
-  } else if (asName && free(asName)) { name = asName; releaseName(g, asName); }
+  }
+  if (useAs) { name = asName; releaseName(g, asName); }
+  else if (prev) { name = prev.name; }
   else {
     const nn = normName(name);
     const hit = (g.users || []).find((u) => free(u) && normName(u) === nn);
     if (hit) { name = hit; releaseName(g, hit); }
   }
-  if (!prev && (g.users || []).includes(name) && activeLinked(g).has(name)) {
+  if (!prev && !useAs && (g.users || []).includes(name) && activeLinked(g).has(name)) {
     name = `${name} (${user.email.split('@')[0]})`.slice(0, 40);
   }
   g.users = g.users || [];
@@ -99,6 +108,24 @@ export default async function handler(req, res) {
   const admin = isAdmin(email);
 
   try {
+    // ---------- GET ?preview=<mã>&k=<mã bí mật>: xem trước nhóm khi vào bằng link ----------
+    if (req.method === 'GET' && req.query?.preview) {
+      const c = normCode(req.query.preview);
+      const pg = c ? await kv.get(gkey(c)) : null;
+      if (!pg || !tokenOk(pg, String(req.query.k || ''))) return bad(res, 'Link tham gia không hợp lệ hoặc đã được đổi. Hãy xin trưởng nhóm link mới.', 404);
+      const prof = (await kv.get(`profile:${user.sub}`)) || {};
+      const linked = activeLinked(pg);
+      const reserved = new Set(Object.entries(pg.invites || {}).filter(([e]) => e !== email).map(([, v]) => v.asName).filter(Boolean));
+      const leftNames = new Set(Object.values(pg.left || {}).map((x) => x.name));
+      const names = (pg.users || []).filter((u) => !linked.has(u) && !reserved.has(u)).map((u) => ({ name: u, left: leftNames.has(u) }))
+        .sort((a, b) => Number(a.left) - Number(b.left));
+      const retKey = pg.left?.[user.sub] ? user.sub : Object.keys(pg.left || {}).find((k) => String(pg.left[k].email || '').toLowerCase() === email);
+      const myName = String(prof.name || user.name || user.email);
+      const nn = normName(myName);
+      const suggested = (retKey && pg.left[retKey].name) || names.find((x) => normName(x.name) === nn)?.name || '';
+      return res.status(200).json({ code: pg.code || c, alreadyMember: !!pg.members?.[user.sub], myName, names, suggested, returning: !!retKey });
+    }
+
     // ---------- GET: danh sách nhóm + lời mời (+ tất cả nhóm nếu là admin) ----------
     if (req.method === 'GET') {
       const myCodes = (await kv.smembers(ukey(user.sub))).map(unCs);
@@ -150,6 +177,7 @@ export default async function handler(req, res) {
         ownerSub: user.sub,
         ownerEmail: user.email,
         createdAt: Date.now(),
+        joinToken: newToken(),
         members: { [user.sub]: { email: user.email, name, role: 'owner', joinedAt: Date.now() } },
         invites: {},
         users: [name],
@@ -175,6 +203,33 @@ export default async function handler(req, res) {
       if (g2 && typeof g2 === 'object') { g = g2; code = rawCode; key = gkey(rawCode); }
     }
     if (!g) return bad(res, 'Nhóm không tồn tại', 404);
+
+    // ---------- Vào nhóm bằng link (không cần đúng email được mời) ----------
+    if (action === 'join') {
+      if (!tokenOk(g, String(body.k || ''))) return bad(res, 'Link tham gia không hợp lệ hoặc đã được đổi. Hãy xin trưởng nhóm link mới.', 403);
+      if (g.members?.[user.sub]) return res.status(200).json({ success: true, code });
+      const asName = String(body.asName || '').trim();
+      if (asName) {
+        const reservedByOther = Object.entries(g.invites || {}).some(([e, v]) => v.asName === asName && e !== email);
+        if (!(g.users || []).includes(asName) || activeLinked(g).has(asName) || reservedByOther) {
+          return bad(res, 'Tên này vừa được người khác nhận, hãy chọn lại', 409);
+        }
+      }
+      addMember(g, user, profile, asName);
+      const hadInvite = !!g.invites?.[email];
+      if (hadInvite) delete g.invites[email];
+      await kv.set(key, g);
+      await kv.sadd(ukey(user.sub), cs(code));
+      if (hadInvite) await kv.srem(ikey(email), cs(code));
+      return res.status(200).json({ success: true, code });
+    }
+
+    // ---------- Link tham gia nhóm: xem / tạo mới (trưởng nhóm, admin) ----------
+    if (action === 'joinLink' || action === 'resetJoinLink') {
+      if (!canManage(g, user)) return bad(res, 'Chỉ trưởng nhóm mới quản lý được link tham gia', 403);
+      if (!g.joinToken || action === 'resetJoinLink') { g.joinToken = newToken(); await kv.set(key, g); }
+      return res.status(200).json({ success: true, link: joinLinkOf(req, g, code) });
+    }
 
     // ---------- Đồng ý / từ chối lời mời ----------
     if (action === 'accept' || action === 'decline') {
@@ -208,7 +263,8 @@ export default async function handler(req, res) {
       }
       const memberEmails = new Set(Object.values(g.members || {}).map((m) => String(m.email).toLowerCase()));
       const inviterName = String(profile.name || user.name || user.email);
-      const link = `${appUrl(req)}/?invite=${encodeURIComponent(code)}`;
+      if (!g.joinToken) g.joinToken = newToken();
+      const link = joinLinkOf(req, g, code);
       const results = [];
       const toSend = [];
 
