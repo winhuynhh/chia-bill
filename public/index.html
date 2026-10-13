@@ -332,6 +332,8 @@
     #toast.show { opacity: 1; transform: translate(-50%, 0); }
     #toast.err { background: var(--neg); }
 
+    /* Trình duyệt di động có thanh công cụ nổi ở đáy: nâng nút lên để không bị che. */
+    @media (hover: none) and (pointer: coarse) { .fab { bottom: calc(max(20px, env(safe-area-inset-bottom)) + 72px); } #toast { bottom: calc(160px + env(safe-area-inset-bottom)); } #mainApp { padding-bottom: 170px; } }
     @media (max-width: 380px) { .rc-total { font-size: 32px; } #areaEqual { grid-template-columns: 1fr; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
@@ -453,7 +455,10 @@
         <div id="fltInfo" class="flt-info"></div>
       </div>
 
-      <section id="pn-exp" class="panel on"><div id="expList"></div></section>
+      <section id="pn-exp" class="panel on">
+        <button id="addInline" class="btn primary block" style="margin-bottom:12px;" onclick="openExp()"><i class="fa-solid fa-plus"></i> Thêm khoản chi</button>
+        <div id="expList"></div>
+      </section>
 
       <section id="pn-bal" class="panel"><div id="balList"></div></section>
 
@@ -1555,6 +1560,7 @@
       $('permAdd').checked = !!st.memberCanAdd;
       $('permEdit').checked = !!st.memberCanEdit;
       $('fab').style.display = canAdd() ? 'inline-flex' : 'none';
+      $('addInline').style.display = canAdd() ? 'inline-flex' : 'none';
     }
 
     function renderDanger() {
