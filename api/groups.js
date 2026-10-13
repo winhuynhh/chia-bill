@@ -36,8 +36,11 @@ async function loadMany(codes) {
 function addMember(g, user, profile) {
   const pay = profilePay(profile);
   let name = String(profile?.name || user.name || user.email).trim().slice(0, 40) || user.email;
+  // Người từng rời nhóm: dùng lại đúng tên cũ để nối lại với lịch sử chi tiêu.
+  const prev = g.left?.[user.sub];
+  if (prev) { name = prev.name; delete g.left[user.sub]; }
   const linked = new Set(Object.values(g.links || {}));
-  if ((g.users || []).includes(name) && linked.has(name)) {
+  if (!prev && (g.users || []).includes(name) && linked.has(name)) {
     name = `${name} (${user.email.split('@')[0]})`.slice(0, 40);
   }
   g.users = g.users || [];
@@ -196,9 +199,24 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true });
     }
 
-    // ---------- Chỉ admin: đổi mã / xóa nhóm ----------
+    // ---------- Thành viên rời nhóm: vẫn giữ tên + chi tiêu + thông tin nhận tiền để quyết toán ----------
+    if (action === 'leave') {
+      const m = g.members?.[user.sub];
+      if (!m) return bad(res, 'Bạn không phải thành viên của nhóm này', 403);
+      if (m.role === 'owner') return bad(res, 'Trưởng nhóm không thể rời nhóm. Hãy xóa nhóm nếu không dùng nữa.', 400);
+      g.left = g.left || {};
+      g.left[user.sub] = { email: m.email, name: m.name, leftAt: Date.now() };
+      delete g.members[user.sub];
+      await kv.set(key, g);
+      await kv.srem(ukey(user.sub), cs(code));
+      return res.status(200).json({ success: true });
+    }
+
+    // ---------- Xóa nhóm: trưởng nhóm hoặc admin. Đổi mã: chỉ admin ----------
     if (action === 'rename' || action === 'delete') {
-      if (!admin) return bad(res, 'Chỉ admin mới được thực hiện thao tác này', 403);
+      if (action === 'rename' ? !admin : !canManage(g, user)) {
+        return bad(res, action === 'rename' ? 'Chỉ admin mới được đổi mã nhóm' : 'Chỉ trưởng nhóm mới được xóa nhóm', 403);
+      }
 
       const memberSubs = Object.keys(g.members || {});
       const inviteEmails = Object.keys(g.invites || {});
