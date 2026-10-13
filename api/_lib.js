@@ -96,7 +96,7 @@ export function groupView(g, user) {
       left: Object.values(g.left || {}).map((x) => x.name),
       members: Object.entries(g.members || {}).map(([sub, m]) => ({ sub, email: m.email, name: m.name, role: m.role })),
       invites: manage
-        ? Object.entries(g.invites || {}).map(([email, i]) => ({ email, at: i.at, byEmail: i.byEmail }))
+        ? Object.entries(g.invites || {}).map(([email, i]) => ({ email, at: i.at, byEmail: i.byEmail, asName: i.asName || '' }))
         : [],
     },
   };

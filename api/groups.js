@@ -34,14 +34,24 @@ async function loadMany(codes) {
   return codes.map((c, i) => ({ code: c, g: gs[i] }));
 }
 
-// Thêm tài khoản vào nhóm: thành viên + người tham gia chia tiền (tên Google) + thông tin nhận tiền.
-function addMember(g, user, profile) {
+const normName = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
+
+// Thêm tài khoản vào nhóm: thành viên + người tham gia chia tiền + thông tin nhận tiền.
+// Nếu trưởng nhóm đã nhập tay một tên tạm cho người này (asName), hoặc tên Google trùng với một tên chưa gắn tài khoản,
+// thì dùng lại tên đó để các khoản chi cũ tự khớp.
+function addMember(g, user, profile, asName) {
   const pay = profilePay(profile);
   let name = String(profile?.name || user.name || user.email).trim().slice(0, 40) || user.email;
-  // Người từng rời nhóm: dùng lại đúng tên cũ để nối lại với lịch sử chi tiêu.
+  const linked = new Set(Object.values(g.links || {}));
+  const free = (n) => (g.users || []).includes(n) && !linked.has(n);
   const prev = g.left?.[user.sub];
   if (prev) { name = prev.name; delete g.left[user.sub]; }
-  const linked = new Set(Object.values(g.links || {}));
+  else if (asName && free(asName)) name = asName;
+  else {
+    const nn = normName(name);
+    const hit = (g.users || []).find((u) => free(u) && normName(u) === nn);
+    if (hit) name = hit;
+  }
   if (!prev && (g.users || []).includes(name) && linked.has(name)) {
     name = `${name} (${user.email.split('@')[0]})`.slice(0, 40);
   }
@@ -156,7 +166,7 @@ export default async function handler(req, res) {
     if (action === 'accept' || action === 'decline') {
       if (!g.invites?.[email]) return bad(res, 'Không tìm thấy lời mời cho email của bạn', 404);
       if (action === 'accept') {
-        addMember(g, user, profile);
+        addMember(g, user, profile, g.invites[email].asName);
         await kv.sadd(ukey(user.sub), cs(code));
       }
       delete g.invites[email];
@@ -174,6 +184,14 @@ export default async function handler(req, res) {
       if (list.length > 10) return bad(res, 'Mỗi lần mời tối đa 10 email');
 
       g.invites = g.invites || {};
+      const asName = String(body.asName || '').trim();
+      if (asName) {
+        if (list.length !== 1) return bad(res, 'Chỉ gắn tên tạm khi mời đúng 1 email');
+        if (!(g.users || []).includes(asName)) return bad(res, 'Tên tạm không có trong nhóm');
+        if (Object.values(g.links || {}).includes(asName)) return bad(res, 'Tên này đã gắn với một tài khoản');
+        const taken = Object.entries(g.invites).find(([e, v]) => v.asName === asName && e !== list[0]);
+        if (taken) return bad(res, `Tên này đang gắn với lời mời gửi tới ${taken[0]}`);
+      }
       const memberEmails = new Set(Object.values(g.members || {}).map((m) => String(m.email).toLowerCase()));
       const inviterName = String(profile.name || user.name || user.email);
       const link = `${appUrl(req)}/?invite=${encodeURIComponent(code)}`;
@@ -186,7 +204,7 @@ export default async function handler(req, res) {
         if (memberEmails.has(to)) { results.push({ email: to, status: 'already_member' }); continue; }
         if (!g.invites[to] && Object.keys(g.invites).length >= 50) { results.push({ email: to, status: 'limit' }); continue; }
         const again = !!g.invites[to];
-        g.invites[to] = { byEmail: user.email, byName: inviterName, at: Date.now() };
+        g.invites[to] = { byEmail: user.email, byName: inviterName, at: Date.now(), ...(asName ? { asName } : {}) };
         results.push({ email: to, status: again ? 'resent' : 'invited' });
         toSend.push(to);
       }

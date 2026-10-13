@@ -8,6 +8,24 @@ import { requireUser, isAdmin, sanitizePay, profilePay, normCode, canAccess, gro
 //   payInfo:  { [tênThànhViên]: { method:'momo', phone, accName } | { method:'bank', bankName, bankAccount, bankHolder } }
 //   links:    { [googleSub]: tênThànhViên }
 
+// Gộp người tham gia `from` vào `to`: chuyển toàn bộ khoản chi, thông tin nhận tiền.
+function mergeParticipants(g, from, to) {
+  g.users = g.users.filter((u) => u !== from);
+  for (const e of g.expenses) {
+    if (e.payer === from) e.payer = to;
+    let det = {};
+    try { det = JSON.parse(e.splitDetails || '{}') || {}; } catch { det = {}; }
+    if (from in det) {
+      det[to] = (Number(det[to]) || 0) + (Number(det[from]) || 0);
+      delete det[from];
+      e.splitDetails = JSON.stringify(det);
+    }
+  }
+  if (g.payInfo[from] && !g.payInfo[to]) g.payInfo[to] = g.payInfo[from];
+  delete g.payInfo[from];
+  for (const [sub, n] of Object.entries(g.links)) if (n === from) g.links[sub] = to;
+}
+
 const bad = (res, msg, status = 400) => res.status(status).json({ error: msg });
 
 export default async function handler(req, res) {
@@ -116,6 +134,22 @@ export default async function handler(req, res) {
         g.links[user.sub] = member;
         const pay = profilePay((await kv.get(`profile:${user.sub}`)) || {});
         if (pay) g.payInfo[member] = pay;
+        break;
+      }
+
+      // Thành viên nhận lại tên tạm do trưởng nhóm đã nhập tay: gộp lịch sử vào đúng tên đó.
+      case 'claim': {
+        const target = String(body.memberName || '');
+        if (!g.users.includes(target)) return bad(res, 'Thành viên không tồn tại');
+        const holder = Object.entries(g.links).find(([sub, n]) => n === target && sub !== user.sub);
+        if (holder) return bad(res, 'Tên này đã gắn với tài khoản khác');
+        const cur = g.links[user.sub];
+        const isMember = !!g.members?.[user.sub];
+        if (cur && cur !== target && isMember) mergeParticipants(g, cur, target);
+        g.links[user.sub] = target;
+        if (isMember) g.members[user.sub].name = target;
+        const pay = profilePay((await kv.get(`profile:${user.sub}`)) || {});
+        if (pay) g.payInfo[target] = pay;
         break;
       }
 
