@@ -628,6 +628,15 @@
     </div>
   </div>
 
+  <!-- Mã QR chuyển khoản ngân hàng (điền sẵn số tiền, nội dung) -->
+  <div id="qrSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="qrTitle">Chuyển khoản bằng QR</h3><button class="ibtn" onclick="closeOv('qrSheet')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <div id="qrBody" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
   <!-- Vào nhóm bằng link: chọn mình có phải người đã nhập tay không -->
   <!-- Nhập mã nhóm đã tồn tại: tham gia hoặc tạo mã khác -->
   <div id="codeSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="codeTitle">
@@ -767,7 +776,7 @@
     }
 
     // ---------- Lớp phủ dùng chung ----------
-    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet', 'imgSheet', 'codeSheet'];
+    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet', 'imgSheet', 'codeSheet', 'qrSheet'];
     function syncLock() { document.body.classList.toggle('lock', OVERLAYS.some((id) => $(id).classList.contains('open'))); }
     function openOv(id, blocking) {
       const el = $(id);
@@ -776,23 +785,19 @@
       syncLock();
     }
     function closeOv(id) { $(id).classList.remove('open'); syncLock(); }
+    const closeSimple = (id) => () => closeOv(id);
+    const CLOSERS = { dlg: () => dlgClose(null), payModal: () => closePay(), settleModal: () => closeSettle(), joinSheet: () => closeJoin(), imgSheet: () => closeImg(), codeSheet: closeSimple('codeSheet'), qrSheet: closeSimple('qrSheet'), expSheet: () => closeExp() };
     OVERLAYS.forEach((id) => $(id).addEventListener('mousedown', (ev) => {
       if (ev.target !== $(id) || $(id).dataset.block) return;
-      if (id === 'dlg') dlgClose(null);
-      else if (id === 'payModal') closePay();
-      else if (id === 'settleModal') closeSettle();
-      else if (id === 'joinSheet') closeJoin();
-      else if (id === 'imgSheet') closeImg();
-      else closeExp();
+      CLOSERS[id]();
     }));
     document.addEventListener('keydown', (ev) => {
       if (ev.key !== 'Escape') return;
       closeMenu();
-      for (const id of OVERLAYS) {
+      for (const id of [...OVERLAYS].reverse()) {
         const el = $(id);
         if (!el.classList.contains('open')) continue;
-        if (id === 'dlg') dlgClose(null);
-        else if (!el.dataset.block) { if (id === 'payModal') closePay(); else if (id === 'settleModal') closeSettle(); else if (id === 'joinSheet') closeJoin(); else if (id === 'imgSheet') closeImg(); else closeExp(); }
+        if (id === 'dlg' || !el.dataset.block) CLOSERS[id]();
         return;
       }
     });
@@ -1959,6 +1964,46 @@
       return computeTransfers().sort((a, b) => score(b) - score(a));
     }
 
+    // ---------- QR chuyển khoản ngân hàng (VietQR) ----------
+    // Tên ngân hàng người dùng gõ tự do -> mã ngân hàng của VietQR. Không nhận ra thì chỉ hiện nút sao chép.
+    const BANKS = {
+      ICB: 'vietinbank viettinbank ctg', VCB: 'vietcombank vcb', BIDV: 'bidv', VBA: 'agribank vba', OCB: 'ocb', MB: 'mb mbbank mbbankquandoi quandoi',
+      TCB: 'techcombank tcb', ACB: 'acb', VPB: 'vpbank vpb', TPB: 'tpbank tpb', STB: 'sacombank stb', HDB: 'hdbank hdb', VCCB: 'vietcapitalbank banviet bvbank',
+      SCB: 'scb', VIB: 'vib', SHB: 'shb', EIB: 'eximbank exim eib', MSB: 'msb maritimebank', CAKE: 'cake', Ubank: 'ubank', TIMO: 'timo', SGICB: 'saigonbank',
+      BAB: 'bacabank bab', PVCB: 'pvcombank pvcb', NCB: 'ncb', ABB: 'abbank abb', VAB: 'vietabank vab', NAB: 'namabank nab', PGB: 'pgbank pgb',
+      VIETBANK: 'vietbank', BVB: 'baovietbank bvb', SEAB: 'seabank seab', LPB: 'lpbank lpb lienvietpostbank lienviet', KLB: 'kienlongbank klb', CIMB: 'cimb',
+      VTLMONEY: 'viettelmoney', VNPTMONEY: 'vnptmoney', SHBVN: 'shinhanbank shinhan', HSBC: 'hsbc', UOB: 'uob', WVN: 'woori'
+    };
+    const ascii = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+    const flat = (t) => ascii(t).replace(/[^a-z0-9]/g, '');
+    function bankCode(name) {
+      const full = flat(name);
+      for (const n of [full, full.replace(/^nganhang/, '')]) {
+        if (!n) continue;
+        for (const [code, al] of Object.entries(BANKS)) if (al.split(' ').includes(n)) return code;
+      }
+      return '';
+    }
+    const qrUrl = (info, amount, note) => `https://img.vietqr.io/image/${bankCode(info.bankName)}-${info.bankAccount}-compact2.png?amount=${Math.round(amount)}&addInfo=${encodeURIComponent(note)}&accountName=${encodeURIComponent(info.bankHolder)}`;
+    const transferNote = (t) => (`${ascii(t.from).replace(/[^a-z0-9 ]/g, '').trim()} tra ${currentG}`).slice(0, 50);
+
+    function openQr(i) {
+      const t = transfers[i];
+      const info = t && payOf(t.to);
+      if (!info || info.method !== 'bank' || !bankCode(info.bankName)) return;
+      const note = transferNote(t);
+      $('qrBody').innerHTML = `
+        <p class="sub" style="margin-bottom:10px;">${esc(t.from)} chuyển cho <b>${esc(t.to)}</b> <b class="num">${fmt(t.amount)}đ</b></p>
+        <div style="text-align:center;"><img id="qrImg" src="${qrUrl(info, t.amount, note)}" alt="Mã QR chuyển khoản" style="width:100%;max-width:340px;border-radius:14px;background:#fff;border:1px solid var(--line);" onerror="this.outerHTML='<p class=&quot;hint&quot;>Không tải được mã QR. Kiểm tra mạng rồi mở lại, hoặc dùng nút sao chép bên dưới.</p>'"></div>
+        <p class="hint" style="margin:10px 0;">Số tiền, số tài khoản và nội dung đã điền sẵn. Trên điện thoại: chụp màn hình, mở app ngân hàng, chọn Quét QR rồi chọn ảnh từ thư viện. Trên máy tính: quét bằng điện thoại.</p>
+        <div class="t-act">
+          <button class="btn soft sm" onclick="copyText('${esc(info.bankAccount)}')"><i class="fa-regular fa-copy"></i> Số tài khoản</button>
+          <button class="btn soft sm" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>
+          <button class="btn soft sm" onclick="copyText('${esc(note)}')"><i class="fa-regular fa-copy"></i> Nội dung</button>
+        </div>`;
+      openOv('qrSheet');
+    }
+
     function openSettle() {
       settleOpen = true;
       transfers = sortedTransfers();
@@ -1991,7 +2036,8 @@
           btns = `<button class="btn soft sm" onclick="openPay(localData.users[${localData.users.indexOf(t.to)}])"><i class="fa-solid fa-plus"></i> Nhập thông tin của ${esc(t.to)}</button>`;
         } else if (info.method === 'bank') {
           recvLine = `<i class="fa-solid fa-building-columns" style="color:var(--info);"></i> ${esc(info.bankName)}, STK <b>${esc(info.bankAccount)}</b>, ${esc(info.bankHolder)}`;
-          btns = `<button class="btn soft sm" onclick="copyText('${esc(info.bankAccount)}')"><i class="fa-regular fa-copy"></i> Số tài khoản</button>
+          btns = `${bankCode(info.bankName) ? `<button class="btn primary sm" onclick="openQr(${i})"><i class="fa-solid fa-qrcode"></i> Mã QR chuyển khoản</button>` : ''}
+                  <button class="btn soft sm" onclick="copyText('${esc(info.bankAccount)}')"><i class="fa-regular fa-copy"></i> Số tài khoản</button>
                   <button class="btn soft sm" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>`;
         } else {
           recvLine = `<i class="fa-solid fa-mobile-screen" style="color:var(--brand);"></i> MoMo ${info.accName ? esc(info.accName) + ', ' : ''}<b>${esc(info.phone)}</b>`;

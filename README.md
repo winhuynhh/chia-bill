@@ -100,3 +100,7 @@ Mọi request (trừ `/api/config`, `/api/auth`) cần header `Authorization: Be
 ## Vào nhóm bằng mã
 
 Ở trang chủ nhập mã nhóm: chưa có thì tạo mới; đã có thì hiện lựa chọn tham gia nhóm đó (rồi chọn tên nhập tay của mình) hoặc tạo nhóm với mã khác. Trưởng nhóm có thể tắt công tắc "Cho phép vào nhóm bằng mã" để chỉ vào bằng lời mời hoặc link. API: `GET /api/groups?lookup=<mã>`, `settings` nhận thêm `joinByCode`.
+
+## Settle up
+
+Người nhận dùng MoMo: nút "Mở MoMo" mở link nhận tiền điền sẵn SĐT và số tiền. Người nhận dùng ngân hàng: nút "Mã QR chuyển khoản" tạo mã VietQR (qua img.vietqr.io) điền sẵn ngân hàng, số tài khoản, số tiền, nội dung. Tên ngân hàng không nhận ra được thì chỉ hiện nút sao chép.

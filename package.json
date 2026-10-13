@@ -1,6 +1,6 @@
 {
   "name": "billing-master",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "private": true,
   "type": "module",
   "description": "Billing Master - chia tiền nhóm: đăng nhập Google, nhóm theo lời mời email, Settle up (Vercel Serverless + Redis/KV)",
