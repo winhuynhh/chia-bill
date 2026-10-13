@@ -1,8 +1,10 @@
 {
   "name": "billing-master",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Billing Master - chia tiền nhóm, chạy trên Vercel (Serverless Functions + Vercel KV)",
+  "type": "module",
+  "description": "Billing Master - chia tiền nhóm, đăng nhập Google, Settle up (Vercel Serverless + Redis/KV)",
+  "engines": { "node": ">=18" },
   "dependencies": {
     "@vercel/kv": "^1.0.1"
   }
