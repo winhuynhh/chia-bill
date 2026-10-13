@@ -13,7 +13,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
-    body, input, select, button, td, th { font-family: 'Inter', sans-serif; letter-spacing: -0.01em; }
+    body, input, select, textarea, button, td, th { font-family: 'Inter', sans-serif; letter-spacing: -0.01em; }
     h1, h2, h3, h6, .btn-cam { font-family: 'Lexend', sans-serif; }
     :root { --google-red: #EA4335; --google-red-dark: #D93025; --google-blue: #4285F4; --border-color: #DADCE0; --momo: #A50064; }
     body { background-color: #F8F9FA; color: #3C4043; }
@@ -27,8 +27,12 @@
     .btn-soft:hover { background: #E8EAED; }
     .btn-ok { background: #E6F4EA; color: #137333; border: none; font-weight: 700; border-radius: 24px; padding: 6px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
     .btn-ok:hover { background: #CEEAD6; }
+    .btn-danger-soft { background: #FCE8E6; color: #C5221F; border: none; font-weight: 700; border-radius: 24px; padding: 6px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-danger-soft:hover { background: #F9D2CE; }
     .tab-pay { border: 1px solid var(--border-color); background: #fff; color: #5F6368; font-weight: 600; border-radius: 24px; padding: 8px 14px; font-size: 12px; flex: 1; }
     .tab-pay.on { background: var(--momo); border-color: var(--momo); color: #fff; }
+    .row-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid #F1F3F4; border-radius: 16px; margin-bottom: 8px; background: #fff; }
+    .row-item.flash { box-shadow: 0 0 0 3px rgba(165,0,100,.35); }
     .table-container { border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; background: white; }
     .table-matrix { font-size: 13px; width: 100%; border-collapse: separate; border-spacing: 0; min-width: 700px; }
     .table-matrix thead th { background-color: #F8F9FA; color: #5F6368; font-weight: 600; font-size: 11px; padding: 16px 10px; border-bottom: 1px solid var(--border-color); text-transform: uppercase; }
@@ -41,10 +45,11 @@
     .badge-nhan { background-color: #E6F4EA; color: #137333; padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 11px; white-space: nowrap; }
     .badge-dong { background-color: #FCE8E6; color: #C5221F; padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 11px; white-space: nowrap; }
     .badge-xong { background-color: #F1F3F4; color: #5F6368; padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 11px; white-space: nowrap; }
+    .badge-admin { background-color: #E8F0FE; color: #174EA6; padding: 4px 10px; border-radius: 16px; font-weight: 700; font-size: 10px; white-space: nowrap; }
     #loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; }
     .btn-delete { color: #5f6368; transition: 0.2s; padding: 5px 10px; border-radius: 50%; }
     .btn-delete:hover { color: var(--google-red); background: #fce8e6; }
-    #toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: #202124; color: #fff; padding: 10px 18px; border-radius: 24px; font-size: 12px; font-weight: 600; z-index: 10010; display: none; }
+    #toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: #202124; color: #fff; padding: 10px 18px; border-radius: 24px; font-size: 12px; font-weight: 600; z-index: 10010; display: none; max-width: 90vw; text-align: center; }
   </style>
 </head>
 <body class="p-3">
@@ -108,9 +113,10 @@
 
   <div class="max-w-7xl mx-auto">
     <!-- Thanh tài khoản -->
-    <div id="userBar" class="items-center justify-end gap-3 mb-3" style="display:none;">
+    <div id="userBar" class="items-center justify-end flex-wrap gap-2 mb-3" style="display:none;">
       <img id="userAvatar" alt="" referrerpolicy="no-referrer" class="rounded-full border" style="width:28px;height:28px;object-fit:cover;">
       <span id="userNameLbl" class="text-xs font-semibold text-stone-600"></span>
+      <span id="adminBadge" class="badge-admin" style="display:none;">ADMIN</span>
       <button onclick="openPay('me')" class="btn btn-outline-secondary btn-sm rounded-pill border-0 font-semibold"><i class="fa-solid fa-wallet"></i> Tài khoản nhận tiền</button>
       <button onclick="doLogout()" class="btn btn-outline-secondary btn-sm rounded-pill border-0 font-semibold"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
     </div>
@@ -124,41 +130,60 @@
       <p id="loginErr" class="text-danger text-sm mt-4"></p>
     </div>
 
-    <!-- Màn 2: nhập mã nhóm -->
-    <div id="groupArea" class="text-center py-20" style="display:none;">
-      <div class="mb-4"><i class="fa-solid fa-file-invoice-dollar fa-4x" style="color: var(--google-blue);"></i></div>
-      <h1 class="text-4xl font-extrabold text-stone-800 mb-2">Billing Master</h1>
-      <p class="text-stone-500 mb-10 text-sm">Nhập mã nhóm để vào bảng chia tiền</p>
-      <div class="max-w-md mx-auto p-2 bg-white rounded-full shadow-lg flex gap-2 border">
-        <input type="text" id="groupId" onkeyup="if(event.key === 'Enter') loadGroup()" class="form-control border-0 focus:ring-0 font-semibold px-5 rounded-full" placeholder="Nhập mã nhóm...">
-        <button onclick="loadGroup()" class="btn btn-cam px-8 py-2">Truy cập</button>
+    <!-- Màn 2: nhóm của tôi -->
+    <div id="groupArea" style="display:none;">
+      <div class="max-w-3xl mx-auto py-4">
+        <div class="text-center mb-6">
+          <i class="fa-solid fa-file-invoice-dollar fa-3x" style="color: var(--google-blue);"></i>
+          <h1 class="text-3xl font-extrabold text-stone-800 mt-3 mb-1">Nhóm của tôi</h1>
+          <p class="text-stone-500 text-sm mb-0">Bạn chỉ thấy các nhóm mình đã tham gia hoặc được mời qua email.</p>
+        </div>
+
+        <div id="inviteBox"></div>
+
+        <div class="app-card border mb-4">
+          <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Nhóm đã tham gia</h6>
+          <div id="myGroups"></div>
+        </div>
+
+        <div class="app-card border mb-4">
+          <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Tạo nhóm mới</h6>
+          <div class="flex gap-2">
+            <input type="text" id="newGroupCode" onkeyup="if(event.key === 'Enter') createGroup()" class="form-control font-semibold" placeholder="Đặt mã nhóm (vd: di-da-lat)">
+            <button onclick="createGroup()" class="btn btn-cam px-4 text-sm whitespace-nowrap"><i class="fa-solid fa-plus"></i> Tạo</button>
+          </div>
+          <p class="text-[10px] text-stone-400 mt-2 mb-0">Bạn sẽ tự động là trưởng nhóm và thành viên của nhóm. Sau đó mời người khác bằng email.</p>
+        </div>
+
+        <div id="adminBox"></div>
       </div>
     </div>
 
     <!-- Màn 3: app -->
     <div id="mainApp" style="display:none;">
       <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <h2 class="text-2xl font-bold text-stone-800 flex items-center gap-3">
+        <h2 class="text-2xl font-bold text-stone-800 flex items-center flex-wrap gap-3">
           <i class="fa-solid fa-folder-open" style="color: #FBBC04;"></i> <span id="displayGroupId"></span>
+          <span id="roleBadge" class="badge-xong"></span>
         </h2>
         <div class="flex flex-wrap justify-center gap-2">
           <button onclick="loadGroup()" class="btn btn-light border font-semibold btn-sm rounded-pill px-4"><i class="fa-solid fa-rotate"></i> Làm mới</button>
           <button onclick="openSettle()" class="btn btn-cam btn-sm px-4" style="background: var(--momo);"><i class="fa-solid fa-handshake"></i> SETTLE UP</button>
           <button onclick="downloadTable()" class="btn btn-dark font-semibold btn-sm rounded-pill px-4"><i class="fa-solid fa-camera me-2"></i> LƯU ẢNH (JPG)</button>
-          <button onclick="exitGroup()" class="btn btn-outline-danger font-semibold btn-sm rounded-pill border-0 px-4"><i class="fa-solid fa-power-off"></i> Thoát</button>
+          <button onclick="exitGroup()" class="btn btn-outline-danger font-semibold btn-sm rounded-pill border-0 px-4"><i class="fa-solid fa-arrow-left"></i> Về danh sách nhóm</button>
         </div>
       </div>
 
       <div class="row g-4">
         <div class="col-lg-4 space-y-4">
           <div class="app-card border">
-            <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Thành viên</h6>
+            <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Người chia tiền</h6>
             <div class="flex gap-2 mb-3">
               <input type="text" id="userName" onkeyup="if(event.key === 'Enter') addUser()" class="form-control" placeholder="Tên người mới...">
               <button onclick="addUser()" class="btn btn-cam px-4"><i class="fa-solid fa-plus"></i></button>
             </div>
             <div id="userTags" class="flex flex-wrap gap-2"></div>
-            <p class="text-[10px] text-stone-400 mt-3 mb-0">Bấm vào tên thành viên để nhập/sửa tài khoản nhận tiền của họ.</p>
+            <p class="text-[10px] text-stone-400 mt-3 mb-0">Bấm vào tên để nhập/sửa tài khoản nhận tiền của họ.</p>
           </div>
 
           <div class="app-card border">
@@ -170,6 +195,18 @@
                 <div id="myPayText" class="text-sm font-semibold text-stone-700 break-words"></div>
               </div>
               <button onclick="openPay('me')" class="w-full btn-soft justify-center py-2"><i class="fa-solid fa-pen"></i> Sửa tài khoản nhận tiền</button>
+            </div>
+          </div>
+
+          <div class="app-card border">
+            <h6 class="text-[11px] font-bold text-stone-500 uppercase tracking-widest mb-3">Tài khoản đã tham gia nhóm</h6>
+            <div id="memberList" class="mb-3"></div>
+            <div id="inviteForm">
+              <div class="text-[10px] font-bold text-stone-400 uppercase mb-2">Mời thêm bằng email</div>
+              <textarea id="inviteEmails" rows="2" class="form-control text-sm" placeholder="Nhập email, cách nhau bằng dấu phẩy (tối đa 10)"></textarea>
+              <button onclick="sendInvites()" class="w-full btn btn-cam py-2 mt-2 text-xs uppercase"><i class="fa-solid fa-paper-plane"></i> Gửi lời mời</button>
+              <div id="inviteResult" class="mt-3"></div>
+              <div id="pendingInvites" class="mt-3"></div>
             </div>
           </div>
 
@@ -223,7 +260,9 @@
     let myProfile = {};       // { pay: {...} }
     let token = '';
     try { token = localStorage.getItem('bm_token') || ''; } catch (e) {}
-    let localData = { users: [], expenses: [], payInfo: {}, links: {} };
+    let localData = { users: [], expenses: [], payInfo: {}, links: {}, meta: null };
+    let homeData = { isAdmin: false, groups: [], invites: [], all: null };
+    let lastInvite = null;
     let transfers = [];
     let settleOpen = false;
     let busy = false;
@@ -231,15 +270,20 @@
     let payTarget = 'me';     // 'me' hoặc tên thành viên
     let payMethod = 'momo';
     let paySaving = false;
+    // Link mời trong email có dạng /?invite=<mã nhóm>
+    let deepLink = '';
+    try { const q = new URLSearchParams(location.search); deepLink = (q.get('invite') || q.get('g') || '').trim().toLowerCase().replace(/\s+/g, '-'); } catch (e) {}
 
     const $ = (id) => document.getElementById(id);
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const fmt = (n) => Math.round(n).toLocaleString('vi-VN');
     const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2, 10));
     const showLoad = (v) => { $('loading').style.display = v ? 'flex' : 'none'; };
-    const normData = (d) => ({ users: d?.users || [], expenses: d?.expenses || [], payInfo: d?.payInfo || {}, links: d?.links || {} });
+    const normData = (d) => ({ users: d?.users || [], expenses: d?.expenses || [], payInfo: d?.payInfo || {}, links: d?.links || {}, meta: d?.meta || null });
+    const getMeta = () => localData.meta || { code: currentG, role: null, canManage: false, members: [], invites: [] };
     const parseSplit = (e) => { try { return JSON.parse(e.splitDetails || '{}') || {}; } catch (_) { return {}; } };
     const myMember = () => (me && localData.links) ? (localData.links[me.sub] || '') : '';
+    const fmtDate = (t) => { try { return new Date(t).toLocaleDateString('vi-VN'); } catch (_) { return ''; } };
 
     // ---------- Thông tin nhận tiền ----------
     function normPay(p) {
@@ -264,7 +308,7 @@
       t.textContent = msg;
       t.style.display = 'block';
       clearTimeout(toast._t);
-      toast._t = setTimeout(() => { t.style.display = 'none'; }, 1800);
+      toast._t = setTimeout(() => { t.style.display = 'none'; }, 2600);
     }
 
     async function copyText(text) {
@@ -303,9 +347,10 @@
       if (me.picture) av.src = me.picture;
     }
 
-    // Sau khi đăng nhập: nếu chưa có tài khoản nhận tiền thì bắt buộc đăng ký.
+    // Sau khi đăng nhập: vào danh sách nhóm; nếu chưa có tài khoản nhận tiền thì bắt buộc đăng ký.
     function enterGroupScreen() {
       showScreen('group');
+      loadHome();
       if (!profilePay(myProfile)) openPay('me', true);
     }
 
@@ -340,10 +385,13 @@
 
     function doLogout() {
       token = ''; me = null; myProfile = {}; currentG = '';
+      homeData = { isAdmin: false, groups: [], invites: [], all: null };
+      lastInvite = null;
+      $('adminBadge').style.display = 'none';
       try { localStorage.removeItem('bm_token'); } catch (_) {}
       try { google.accounts.id.disableAutoSelect(); } catch (_) {}
       closeSettle();
-      closePay(true);
+      closePay();
       showScreen('login');
       initGoogle();
     }
@@ -445,38 +493,161 @@
       $('myPayText').textContent = payText(profilePay(myProfile)) || 'Chưa đăng ký';
     }
 
-    // ---------- Nhóm ----------
-    async function loadGroup() {
-      const gid = (currentG || $('groupId').value).trim().toLowerCase();
-      if (!gid) return alert("Vui lòng nhập mã nhóm!");
-
+    // ---------- Danh sách nhóm (màn Nhóm của tôi) ----------
+    async function loadHome() {
       showLoad(true);
       try {
-        const data = normData(await api('/api/data?groupId=' + encodeURIComponent(gid)));
+        homeData = await api('/api/groups');
+        $('adminBadge').style.display = homeData.isAdmin ? 'inline-block' : 'none';
+        renderHome();
+        handleDeepLink();
+      } catch (e) {
+        if (token) alert(e.message);
+      } finally { showLoad(false); }
+    }
+
+    function renderHome() {
+      const h = homeData;
+      $('inviteBox').innerHTML = h.invites.length ? `<div class="app-card border mb-4" style="border-color: var(--momo);">
+        <h6 class="text-[11px] font-bold uppercase tracking-widest mb-3" style="color: var(--momo);"><i class="fa-solid fa-envelope-open-text me-1"></i> Lời mời tham gia (${h.invites.length})</h6>
+        ${h.invites.map((v, i) => `<div id="inv-${i}" class="row-item">
+          <div class="text-sm"><b>${esc(v.code)}</b><div class="text-[11px] text-stone-500">${esc(v.invitedBy)} mời bạn${v.at ? ' • ' + fmtDate(v.at) : ''}</div></div>
+          <div class="flex gap-2">
+            <button class="btn-ok" onclick="respondInvite(${i}, 'accept')"><i class="fa-solid fa-check"></i> Đồng ý</button>
+            <button class="btn-soft" onclick="respondInvite(${i}, 'decline')">Từ chối</button>
+          </div></div>`).join('')}
+      </div>` : '';
+
+      $('myGroups').innerHTML = h.groups.length ? h.groups.map((g, i) => `<div class="row-item">
+          <div class="text-sm"><b>${esc(g.code)}</b>
+            ${g.role === 'owner' ? '<span class="badge-nhan ms-1">Trưởng nhóm</span>' : ''}
+            <div class="text-[11px] text-stone-500">${g.memberCount} thành viên • ${g.billCount} khoản chi</div></div>
+          <button class="btn btn-cam btn-sm px-4" onclick="openGroupAt(${i})">Mở</button></div>`).join('')
+        : '<p class="text-sm text-stone-400 mb-0">Bạn chưa tham gia nhóm nào. Hãy tạo nhóm mới hoặc nhờ trưởng nhóm mời qua email.</p>';
+
+      $('adminBox').innerHTML = (h.isAdmin && h.all) ? `<div class="app-card border mb-4" style="border-color: #174EA6;">
+        <h6 class="text-[11px] font-bold uppercase tracking-widest mb-3" style="color:#174EA6;"><i class="fa-solid fa-user-shield me-1"></i> Quản trị: tất cả nhóm (${h.all.length})</h6>
+        ${h.all.length ? `<div class="table-container"><table class="table-matrix" style="min-width: 520px;">
+          <thead><tr><th class="text-start">Mã nhóm</th><th>Trưởng nhóm</th><th>TV</th><th>Khoản chi</th><th></th></tr></thead>
+          <tbody>${h.all.map((g, i) => `<tr>
+            <td class="text-start font-semibold">${esc(g.code)}</td>
+            <td class="text-[11px] text-stone-500">${esc(g.ownerEmail)}</td>
+            <td>${g.memberCount}</td><td>${g.billCount}</td>
+            <td><div class="flex gap-1 justify-end">
+              <button class="btn-soft" onclick="openGroupAdmin(${i})">Mở</button>
+              <button class="btn-soft" onclick="adminRename(${i})">Đổi mã</button>
+              <button class="btn-danger-soft" onclick="adminDelete(${i})">Xóa</button>
+            </div></td></tr>`).join('')}</tbody></table></div>` : '<p class="text-sm text-stone-400 mb-0">Chưa có nhóm nào.</p>'}
+      </div>` : '';
+    }
+
+    function handleDeepLink() {
+      if (!deepLink) return;
+      const c = deepLink;
+      deepLink = '';
+      try { history.replaceState(null, '', location.pathname); } catch (_) {}
+      if (homeData.groups.some(g => g.code === c)) { openGroup(c); return; }
+      const ii = homeData.invites.findIndex(v => v.code === c);
+      if (ii >= 0) {
+        const el = $('inv-' + ii);
+        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('flash'); }
+        toast(`Bạn được mời vào nhóm "${c}" — bấm Đồng ý để tham gia`);
+        return;
+      }
+      toast('Bạn chưa được mời vào nhóm này. Hãy đăng nhập đúng email được mời.');
+    }
+
+    async function createGroup() {
+      const code = $('newGroupCode').value.trim();
+      if (!code) return alert('Hãy nhập mã nhóm!');
+      showLoad(true);
+      try {
+        const r = await api('/api/groups', { method: 'POST', body: { action: 'create', code } });
+        $('newGroupCode').value = '';
         showLoad(false);
-        if (data.users.length === 0 && data.expenses.length === 0 && currentG !== gid) {
-          if (!confirm(`Nhóm "${gid}" chưa có dữ liệu. Bạn có muốn tạo mới nhóm này không?`)) return;
-        }
-        currentG = gid;
+        await openGroup(r.code);
+      } catch (e) { showLoad(false); alert(e.message); }
+    }
+
+    async function respondInvite(i, action) {
+      const v = homeData.invites[i];
+      if (!v) return;
+      showLoad(true);
+      try {
+        await api('/api/groups', { method: 'POST', body: { action, code: v.code } });
+        showLoad(false);
+        if (action === 'accept') { toast(`Đã tham gia nhóm "${v.code}"`); await openGroup(v.code); }
+        else await loadHome();
+      } catch (e) { showLoad(false); alert(e.message); }
+    }
+
+    function openGroupAt(i) { if (homeData.groups[i]) openGroup(homeData.groups[i].code); }
+    function openGroupAdmin(i) { if (homeData.all && homeData.all[i]) openGroup(homeData.all[i].code); }
+
+    async function adminRename(i) {
+      const g = homeData.all[i];
+      if (!g) return;
+      const nc = prompt(`Đổi mã nhóm "${g.code}" thành:`, g.code);
+      if (nc === null || !nc.trim() || nc.trim().toLowerCase() === g.code) return;
+      showLoad(true);
+      try {
+        const r = await api('/api/groups', { method: 'POST', body: { action: 'rename', code: g.code, newCode: nc } });
+        toast(`Đã đổi mã thành "${r.code}"`);
+        await loadHome();
+      } catch (e) { alert(e.message); }
+      finally { showLoad(false); }
+    }
+
+    async function adminDelete(i) {
+      const g = homeData.all[i];
+      if (!g) return;
+      const t = prompt(`XÓA nhóm "${g.code}" cùng toàn bộ dữ liệu (không khôi phục được).\nGõ lại mã nhóm để xác nhận:`);
+      if (t === null) return;
+      if (t.trim().toLowerCase() !== g.code) return alert('Mã không khớp, chưa xóa gì cả.');
+      showLoad(true);
+      try {
+        await api('/api/groups', { method: 'POST', body: { action: 'delete', code: g.code } });
+        toast(`Đã xóa nhóm "${g.code}"`);
+        await loadHome();
+      } catch (e) { alert(e.message); }
+      finally { showLoad(false); }
+    }
+
+    // ---------- Trong nhóm ----------
+    async function openGroup(code) {
+      showLoad(true);
+      try {
+        const data = normData(await api('/api/data?groupId=' + encodeURIComponent(code)));
+        currentG = (data.meta && data.meta.code) || code;
         localData = data;
+        lastInvite = null;
+        $('inviteResult').innerHTML = '';
         openApp();
         render();
-      } catch (e) {
-        showLoad(false);
-        alert(e.message);
-      }
+      } catch (e) { alert(e.message); }
+      finally { showLoad(false); }
+    }
+
+    // Làm mới dữ liệu nhóm đang mở (nút "Làm mới").
+    function loadGroup() { if (currentG) openGroup(currentG); }
+
+    // Tải lại dữ liệu mà không đổi màn hình.
+    async function refreshGroup() {
+      const data = normData(await api('/api/data?groupId=' + encodeURIComponent(currentG)));
+      localData = data;
+      render();
     }
 
     function openApp() {
       showScreen('app');
-      $('displayGroupId').innerText = currentG.toUpperCase();
+      $('displayGroupId').textContent = currentG.toUpperCase();
     }
 
     function exitGroup() {
       currentG = '';
       closeSettle();
       showScreen('group');
-      $('groupId').value = "";
+      loadHome();
     }
 
     // Gọi API ghi dữ liệu nhóm; server trả về toàn bộ dữ liệu mới nhất.
@@ -502,6 +673,79 @@
 
     function linkMeNow() {
       mutate({ action: 'linkMe', memberName: $('meSelect').value });
+    }
+
+    // ---------- Thành viên & lời mời ----------
+    const ROLE_LABEL = { owner: 'Trưởng nhóm', admin: 'Admin', member: 'Thành viên' };
+
+    function renderMembers() {
+      const meta = getMeta();
+      $('roleBadge').textContent = ROLE_LABEL[meta.role] || '';
+      $('roleBadge').style.display = meta.role ? 'inline-block' : 'none';
+
+      $('memberList').innerHTML = meta.members.length ? meta.members.map(m => `<div class="flex items-center justify-between gap-2 py-1.5 border-b border-gray-100">
+          <div class="min-w-0"><div class="text-[12px] font-semibold text-stone-700 truncate">${esc(m.name)}${me && m.sub === me.sub ? ' (bạn)' : ''}</div>
+          <div class="text-[10px] text-stone-400 truncate">${esc(m.email)}</div></div>
+          ${m.role === 'owner' ? '<span class="badge-nhan">Trưởng nhóm</span>' : ''}</div>`).join('')
+        : '<p class="text-[11px] text-stone-400 mb-0">Chưa có tài khoản nào.</p>';
+
+      $('inviteForm').style.display = meta.canManage ? 'block' : 'none';
+      $('pendingInvites').innerHTML = meta.invites.length ? `<div class="text-[10px] font-bold text-stone-400 uppercase mb-1">Đang chờ đồng ý (${meta.invites.length})</div>` +
+        meta.invites.map((v, i) => `<div class="flex items-center justify-between gap-2 py-1">
+          <span class="text-[12px] text-stone-600 truncate">${esc(v.email)}</span>
+          <button class="btn-delete" title="Huỷ lời mời" onclick="cancelInvite(${i})"><i class="fa-solid fa-xmark"></i></button></div>`).join('') : '';
+    }
+
+    const INVITE_STATUS = {
+      invited: 'Đã mời', resent: 'Đã mời lại', already_member: 'Đã là thành viên',
+      self: 'Đây là email của bạn', invalid: 'Email không hợp lệ', limit: 'Quá giới hạn lời mời của nhóm',
+    };
+
+    function renderInviteResult() {
+      const r = lastInvite;
+      if (!r) { $('inviteResult').innerHTML = ''; return; }
+      const needManual = r.results.some(x => (x.status === 'invited' || x.status === 'resent') && !x.emailSent);
+      const rows = r.results.map(x => {
+        let label = INVITE_STATUS[x.status] || x.status;
+        let color = '#5F6368';
+        if (x.status === 'invited' || x.status === 'resent') {
+          if (x.emailSent) { label += ' • đã gửi email'; color = '#137333'; }
+          else { label += ' • chưa gửi được email'; color = '#C5221F'; }
+        } else if (x.status === 'invalid' || x.status === 'limit') color = '#C5221F';
+        return `<div class="text-[11px]" style="color:${color};"><b>${esc(x.email)}</b>: ${esc(label)}</div>`;
+      }).join('');
+      $('inviteResult').innerHTML = `<div class="p-3 border rounded-xl bg-gray-50/50">
+        ${rows}
+        ${needManual ? `<div class="text-[11px] text-stone-500 mt-2">${r.mailConfigured ? 'Gửi email lỗi (kiểm tra cấu hình SMTP).' : 'Server chưa cấu hình gửi email.'} Lời mời vẫn có hiệu lực: hãy sao chép nội dung bên dưới và gửi cho họ qua Zalo/Messenger.</div>` : ''}
+        <div class="text-[10px] text-stone-400 mt-2">Mã nhóm: <b>${esc(r.code)}</b></div>
+        <div class="flex flex-wrap gap-2 mt-2">
+          <button class="btn-soft" onclick="copyText(lastInvite.link)"><i class="fa-regular fa-copy"></i> Link</button>
+          <button class="btn-soft" onclick="copyText(lastInvite.shareText)"><i class="fa-regular fa-copy"></i> Sao chép lời mời</button>
+        </div></div>`;
+    }
+
+    async function sendInvites() {
+      const raw = $('inviteEmails').value.trim();
+      if (!raw) return alert('Hãy nhập ít nhất 1 email!');
+      showLoad(true);
+      try {
+        lastInvite = await api('/api/groups', { method: 'POST', body: { action: 'invite', code: currentG, emails: raw } });
+        $('inviteEmails').value = '';
+        renderInviteResult();
+        await refreshGroup();
+      } catch (e) { alert(e.message); }
+      finally { showLoad(false); }
+    }
+
+    async function cancelInvite(i) {
+      const v = getMeta().invites[i];
+      if (!v || !confirm(`Huỷ lời mời gửi tới ${v.email}?`)) return;
+      showLoad(true);
+      try {
+        await api('/api/groups', { method: 'POST', body: { action: 'cancelInvite', code: currentG, email: v.email } });
+        await refreshGroup();
+      } catch (e) { alert(e.message); }
+      finally { showLoad(false); }
     }
 
     // ---------- Hóa đơn ----------
@@ -610,6 +854,7 @@
       const keepPayer = $('expPayer').value;
       const mine = myMember();
       renderMyPay();
+      renderMembers();
 
       $('userTags').innerHTML = users.map((u, i) => {
         const p = payOf(u);
