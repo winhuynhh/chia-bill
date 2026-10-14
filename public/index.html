@@ -372,6 +372,25 @@
     /* Trình duyệt di động có thanh công cụ nổi ở đáy: nâng nút lên để không bị che. */
     @media (hover: none) and (pointer: coarse) { .fab { bottom: calc(max(20px, env(safe-area-inset-bottom)) + 72px); } #toast { bottom: calc(160px + env(safe-area-inset-bottom)); } #mainApp { padding-bottom: 170px; } }
     @media (max-width: 380px) { .rc-total { font-size: 24px; } .rc-st .what b { font-size: 19px; } #areaEqual { grid-template-columns: 1fr; } }
+    @media (min-width: 1000px) {
+      body[data-screen="app"] .wrap { max-width: 1120px; }
+      body[data-screen="group"] .wrap { max-width: 920px; }
+      #mainApp > .wrap { display: grid; grid-template-columns: 330px minmax(0, 1fr); column-gap: 28px; align-items: start; }
+      #mainApp .gbar { grid-column: 1 / -1; }
+      #mainApp .receipt-wrap { grid-column: 1; grid-row: 2; position: sticky; top: 76px; margin-top: 0; }
+      #mainApp .mcol { grid-column: 2; grid-row: 2; min-width: 0; }
+      .receipt .rc-grid { grid-template-columns: 1fr; gap: 14px; }
+      .receipt .rc-total { font-size: 36px; }
+      .receipt .rc-st .what b { font-size: 26px; }
+      #mainApp[data-tab="table"] .receipt-wrap { display: none; }
+      #mainApp[data-tab="table"] .mcol { grid-column: 1 / -1; }
+      #mainApp[data-tab]:not([data-tab="exp"]) .fab { display: none !important; }
+      #addInline { width: auto; }
+      .fab { right: max(16px, calc(50% - 560px)); }
+      #myGroups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      #myGroups .gcard { margin-bottom: 0; }
+      #myGroups .empty { grid-column: 1 / -1; }
+    }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
 </head>
@@ -465,6 +484,7 @@
 
       <div class="receipt-wrap"><div class="receipt" id="hero"></div></div>
 
+      <div class="mcol">
       <div class="tabs">
         <div class="seg" id="tabsBar" role="tablist">
           <button id="tb-exp" class="on" onclick="setTab('exp')" role="tab"><i class="fa-solid fa-receipt"></i>Khoản chi</button>
@@ -573,6 +593,7 @@
 
         <div class="card danger-zone" id="dangerZone"></div>
       </section>
+      </div>
     </div>
 
     <button class="fab" id="fab" onclick="openExp()"><i class="fa-solid fa-plus"></i> Thêm khoản chi</button>
@@ -889,6 +910,7 @@
       $('groupArea').style.display = name === 'group' ? 'block' : 'none';
       $('mainApp').style.display = name === 'app' ? 'block' : 'none';
       $('userBar').style.display = (name !== 'login' && me) ? 'block' : 'none';
+      document.body.dataset.screen = name;
       closeMenu();
       try { window.scrollTo({ top: 0 }); } catch (_) {}
     }
@@ -1309,6 +1331,7 @@
     };
     function setTab(name) {
       curTab = name;
+      $('mainApp').dataset.tab = name;
       const h = TAB_HEAD[name];
       $('phIcon').className = 'fa-solid ' + h[0];
       $('phTitle').textContent = h[1];
