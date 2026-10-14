@@ -187,9 +187,16 @@
     .rc-st.none .what b { font-size: 16px; color: var(--ink); }
     .rc-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
     .tabs { position: sticky; top: 56px; z-index: 40; background: var(--bg); padding: 8px 0 10px; }
-    .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; background: #E9E5F1; border-radius: 999px; padding: 4px; }
+    .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 4px; box-shadow: var(--shadow); }
     .seg button { min-height: 38px; border-radius: 999px; font-weight: 700; font-size: 13.5px; color: var(--mute); transition: background .15s, color .15s; white-space: nowrap; padding: 0 6px; }
-    .seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(29,26,43,.15); }
+    .seg button.on { background: var(--brand-t); color: var(--brand); }
+    .seg:not(.pay) button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 54px; border-radius: 14px; font-size: 12.5px; }
+    .seg:not(.pay) button i { font-size: 17px; }
+    .seg:not(.pay) button.on { background: var(--brand); color: #fff; box-shadow: 0 4px 12px rgba(176,18,95,.28); }
+    .ph { display: flex; align-items: center; gap: 12px; margin: 8px 2px 14px; }
+    .ph-i { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--brand-t); color: var(--brand); display: grid; place-items: center; font-size: 17px; }
+    .ph h3 { font-size: 18px; font-weight: 800; letter-spacing: -.015em; line-height: 1.2; }
+    .ph p { font-size: 13px; color: var(--mute); margin-top: 1px; }
     .seg.pay button { min-height: 42px; }
     .seg.pay button.on { color: var(--brand); }
     .panel { display: none; }
@@ -444,11 +451,16 @@
 
       <div class="tabs">
         <div class="seg" id="tabsBar" role="tablist">
-          <button id="tb-exp" class="on" onclick="setTab('exp')" role="tab">Khoản chi</button>
-          <button id="tb-bal" onclick="setTab('bal')" role="tab">Số dư</button>
-          <button id="tb-table" onclick="setTab('table')" role="tab">Bảng</button>
-          <button id="tb-people" onclick="setTab('people')" role="tab">Thành viên</button>
+          <button id="tb-exp" class="on" onclick="setTab('exp')" role="tab"><i class="fa-solid fa-receipt"></i>Khoản chi</button>
+          <button id="tb-bal" onclick="setTab('bal')" role="tab"><i class="fa-solid fa-scale-balanced"></i>Số dư</button>
+          <button id="tb-table" onclick="setTab('table')" role="tab"><i class="fa-solid fa-table"></i>Bảng</button>
+          <button id="tb-people" onclick="setTab('people')" role="tab"><i class="fa-solid fa-user-group"></i>Thành viên</button>
         </div>
+      </div>
+
+      <div id="ph" class="ph" aria-live="polite">
+        <span class="ph-i"><i id="phIcon" class="fa-solid fa-receipt"></i></span>
+        <div><h3 id="phTitle">Khoản chi</h3><p id="phDesc"></p></div>
       </div>
 
       <div id="fltBar" class="flt">
@@ -1272,8 +1284,18 @@
       loadHome();
     }
 
+    const TAB_HEAD = {
+      exp: ['fa-receipt', 'Khoản chi', 'Mọi khoản chi của nhóm, ai trả và chia cho ai'],
+      bal: ['fa-scale-balanced', 'Số dư', 'Ai đang nợ, ai sẽ nhận lại bao nhiêu'],
+      table: ['fa-table', 'Bảng chia tiền', 'Mỗi người đóng bao nhiêu cho từng khoản'],
+      people: ['fa-user-group', 'Thành viên', 'Người trong nhóm, quyền hạn và cách nhận tiền']
+    };
     function setTab(name) {
       curTab = name;
+      const h = TAB_HEAD[name];
+      $('phIcon').className = 'fa-solid ' + h[0];
+      $('phTitle').textContent = h[1];
+      $('phDesc').textContent = h[2];
       $('fltBar').style.display = (name === 'exp' || name === 'table') ? 'block' : 'none';
       ['exp', 'bal', 'table', 'people'].forEach((t) => {
         $('pn-' + t).classList.toggle('on', t === name);
