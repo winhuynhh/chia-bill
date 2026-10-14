@@ -133,13 +133,24 @@
     .greet { margin-bottom: 20px; }
     .greet h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
     .greet p { color: var(--mute); font-size: 14px; margin-top: 2px; }
+    .sh { display: flex; align-items: center; gap: 10px; margin: 32px 0 12px; }
+    .sh.first { margin-top: 4px; }
+    #inviteBox:not(:empty) + .sh.first { margin-top: 32px; }
+    .sh.div { border-top: 1px solid var(--line); padding-top: 26px; }
+    .sh .ic { flex: none; width: 34px; height: 34px; border-radius: 11px; background: var(--brand-t); color: var(--brand); display: grid; place-items: center; font-size: 15px; }
+    .sh h2 { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+    .sh .cnt { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--mute); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
+    .sh.adm .ic { background: var(--info-t); color: var(--info); }
+    .sh.inv .ic { background: #FFF1D6; color: #B26A00; }
+    .joincard { background: var(--brand-t); border: 1.5px dashed rgba(176,18,95,.35); border-radius: var(--r-lg); padding: 16px; }
+    .joincard p { font-size: 13.5px; color: var(--ink); margin-bottom: 12px; }
     .sec-t { font-size: 13px; font-weight: 700; color: var(--mute); margin: 26px 0 10px; }
-    .invite { background: var(--brand-t); border-radius: var(--r-lg); padding: 14px; margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; transition: box-shadow .2s; }
+    .invite { background: #FFF6E3; border: 1px solid #F3D9A4; border-radius: var(--r-lg); padding: 14px; margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; transition: box-shadow .2s; }
     .invite.flash { box-shadow: 0 0 0 3px var(--brand); }
     .invite .t b { display: block; font-size: 16px; }
-    .invite .t small { color: var(--brand-d); font-size: 13px; }
+    .invite .t small { color: #8A5A00; font-size: 13px; }
     .invite .act { display: flex; gap: 8px; }
-    .gcard { width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px; background: #fff; border-radius: var(--r-lg); box-shadow: var(--shadow); text-align: left; margin-bottom: 10px; transition: transform .12s; }
+    .gcard { width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px; background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); text-align: left; margin-bottom: 10px; transition: transform .12s; }
     .gcard:hover { transform: translateY(-1px); }
     .gcard:active { transform: scale(.99); }
     .gcard .mid { flex: 1; min-width: 0; }
@@ -158,7 +169,7 @@
     .sug .none { padding: 12px; color: var(--mute); font-size: 14px; }
     .sk { background: linear-gradient(90deg, #ECE8F3 25%, #F5F2FA 50%, #ECE8F3 75%); background-size: 200% 100%; animation: sk 1.2s infinite linear; border-radius: var(--r-lg); height: 74px; margin-bottom: 10px; }
     @keyframes sk { to { background-position: -200% 0; } }
-    details.adm { background: #fff; border-radius: var(--r-lg); box-shadow: var(--shadow); margin-top: 26px; }
+    details.adm { background: #fff; border-radius: var(--r-lg); box-shadow: var(--shadow); margin-top: 0; }
     details.adm > summary { list-style: none; cursor: pointer; padding: 16px 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--info); }
     details.adm > summary::-webkit-details-marker { display: none; }
     details.adm[open] > summary { border-bottom: 1px solid var(--line); }
@@ -174,18 +185,23 @@
     .gbar h2 { font-size: 20px; font-weight: 800; letter-spacing: -.015em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .gbar .badge { flex: none; }
     .receipt-wrap { filter: drop-shadow(0 8px 18px rgba(29,26,43,.12)); margin: 8px 0 18px; }
-    .receipt { background: #fff; padding: 20px 20px 34px; -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 16px 100%; mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 16px 100%; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+    .receipt { background: #fff; padding: 14px 16px 26px; -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 16px 100%; mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 16px 100%; border-radius: var(--r-lg) var(--r-lg) 0 0; }
     .rc-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--mute); font-size: 13px; font-weight: 600; }
-    .rc-total { font-size: 38px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; margin: 4px 0 2px; }
-    .rc-total small { font-size: 16px; color: var(--mute); font-weight: 600; margin-left: 3px; letter-spacing: 0; }
-    .rc-sep { border-top: 2px dashed var(--line); margin: 14px 0; }
+    .rc-total { font-size: 28px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; margin: 2px 0; }
+    .rc-total small { font-size: 14px; color: var(--mute); font-weight: 600; margin-left: 3px; letter-spacing: 0; }
+    .rc-sep { border-top: 2px dashed var(--line); margin: 10px 0; }
+    .rc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+    .rc-grid.wide { grid-template-columns: 1fr; }
+    .rc-lab { display: block; font-size: 13px; color: var(--mute); font-weight: 600; }
+    .rc-meta { font-size: 12.5px; color: var(--mute); }
+    .rc-grid .rc-st { display: block; }
     .rc-st { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .rc-st .what { font-size: 14px; color: var(--mute); }
-    .rc-st .what b { display: block; font-size: 24px; letter-spacing: -.02em; }
+    .rc-st .what { font-size: 13px; color: var(--mute); font-weight: 600; }
+    .rc-st .what b { display: block; font-size: 22px; letter-spacing: -.02em; line-height: 1.2; margin-top: 2px; }
     .rc-st.neg .what b { color: var(--neg); }
     .rc-st.pos .what b { color: var(--pos); }
     .rc-st.none .what b { font-size: 16px; color: var(--ink); }
-    .rc-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .rc-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
     .tabs { position: sticky; top: 56px; z-index: 40; background: var(--bg); padding: 8px 0 10px; }
     .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 4px; box-shadow: var(--shadow); }
     .seg button { min-height: 38px; border-radius: 999px; font-weight: 700; font-size: 13.5px; color: var(--mute); transition: background .15s, color .15s; white-space: nowrap; padding: 0 6px; }
@@ -355,7 +371,7 @@
 
     /* Trình duyệt di động có thanh công cụ nổi ở đáy: nâng nút lên để không bị che. */
     @media (hover: none) and (pointer: coarse) { .fab { bottom: calc(max(20px, env(safe-area-inset-bottom)) + 72px); } #toast { bottom: calc(160px + env(safe-area-inset-bottom)); } #mainApp { padding-bottom: 170px; } }
-    @media (max-width: 380px) { .rc-total { font-size: 32px; } #areaEqual { grid-template-columns: 1fr; } }
+    @media (max-width: 380px) { .rc-total { font-size: 24px; } .rc-st .what b { font-size: 19px; } #areaEqual { grid-template-columns: 1fr; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
 </head>
@@ -416,17 +432,17 @@
     <div class="wrap page">
       <div class="greet">
         <h1 id="greetHi">Nhóm của tôi</h1>
-        <p>Bạn chỉ thấy các nhóm mình đã tham gia hoặc được mời qua email.</p>
+        <p>Chỉ hiện nhóm bạn đã tham gia hoặc được mời.</p>
       </div>
 
       <div id="inviteBox"></div>
 
-      <h2 class="sec-t">Nhóm đã tham gia</h2>
+      <div class="sh first"><span class="ic"><i class="fa-solid fa-people-group"></i></span><h2>Nhóm của tôi</h2><span class="cnt" id="grpCnt">0</span></div>
       <div id="myGroups"></div>
 
-      <div class="card" style="margin-top:18px;">
-        <div class="card-h">Vào nhóm hoặc tạo nhóm mới</div>
-        <p class="card-s">Nhập mã nhóm. Nhóm đã có thì bạn chọn tham gia, chưa có thì tạo mới và bạn là trưởng nhóm.</p>
+      <div class="sh"><span class="ic"><i class="fa-solid fa-circle-plus"></i></span><h2>Vào hoặc tạo nhóm</h2></div>
+      <div class="joincard">
+        <p>Nhập mã nhóm. Nhóm đã có thì bạn chọn tham gia, chưa có thì tạo mới và bạn là trưởng nhóm.</p>
         <div class="create">
           <input type="text" id="newGroupCode" onkeyup="if(event.key === 'Enter') submitCode()" class="inp" placeholder="Mã nhóm, vd: di-da-lat" autocapitalize="none" autocomplete="off">
           <button onclick="submitCode()" class="btn primary"><i class="fa-solid fa-arrow-right"></i> Tiếp tục</button>
@@ -1051,7 +1067,7 @@
 
     function renderHome() {
       const h = homeData;
-      $('inviteBox').innerHTML = h.invites.length ? `<h2 class="sec-t" style="margin-top:0;">Lời mời tham gia (${h.invites.length})</h2>` +
+      $('inviteBox').innerHTML = h.invites.length ? `<div class="sh inv first"><span class="ic"><i class="fa-solid fa-envelope-open-text"></i></span><h2>Lời mời tham gia</h2><span class="cnt">${h.invites.length}</span></div>` +
         h.invites.map((v, i) => `<div id="inv-${i}" class="invite">
           <div class="t"><b>${esc(v.code)}</b><small>${esc(v.invitedBy)} mời bạn${v.at ? ', ' + fmtDate(v.at) : ''}</small></div>
           <div class="act">
@@ -1059,6 +1075,7 @@
             <button class="btn soft sm" onclick="respondInvite(${i}, 'decline')">Từ chối</button>
           </div></div>`).join('') : '';
 
+      $('grpCnt').textContent = h.groups.length;
       $('myGroups').innerHTML = h.groups.length ? h.groups.map((g, i) => `<button class="gcard" onclick="openGroupAt(${i})">
           ${av(g.code, 'sq')}
           <span class="mid"><b><span class="n">${esc(g.code)}</span>${g.role === 'owner' ? '<span class="badge nhan">Trưởng nhóm</span>' : ''}</b>
@@ -1066,8 +1083,8 @@
           <i class="fa-solid fa-chevron-right"></i></button>`).join('')
         : `<div class="empty card"><b>Chưa có nhóm nào</b>Tạo nhóm đầu tiên bên dưới, hoặc nhờ trưởng nhóm mời bạn qua email.</div>`;
 
-      $('adminBox').innerHTML = (h.isAdmin && h.all) ? `<details class="adm" open>
-        <summary><i class="fa-solid fa-user-shield"></i> Quản trị: tất cả nhóm (${h.all.length}) <i class="fa-solid fa-chevron-down" style="margin-left:auto;font-size:12px;"></i></summary>
+      $('adminBox').innerHTML = (h.isAdmin && h.all) ? `<div class="sh adm div"><span class="ic"><i class="fa-solid fa-user-shield"></i></span><h2>Quản trị</h2><span class="cnt">${h.all.length} nhóm</span></div><details class="adm" open>
+        <summary>Tất cả nhóm trong hệ thống <i class="fa-solid fa-chevron-down" style="margin-left:auto;font-size:12px;"></i></summary>
         <div class="tw">${h.all.length ? `<table class="atable">
           <thead><tr><th>Mã nhóm</th><th>Trưởng nhóm</th><th>TV</th><th>Khoản chi</th><th></th></tr></thead>
           <tbody>${h.all.map((g, i) => `<tr>
@@ -1813,13 +1830,14 @@
 
       const shown = users.slice(0, 5);
       $('hero').innerHTML = `
-        <div class="rc-top"><span>Tổng chi của nhóm</span><span>${bills.length} khoản chi, ${users.length} người</span></div>
-        <div class="rc-total num">${fmt(total)}<small>đ</small></div>
+        <div class="rc-grid ${mine ? '' : 'wide'}">
+          <div><span class="rc-lab">Tổng chi của nhóm</span><div class="rc-total num">${fmt(total)}<small>đ</small></div><span class="rc-meta">${bills.length} khoản chi, ${users.length} người</span></div>
+          <div>${st}</div>
+        </div>
         <div class="rc-sep"></div>
-        ${st}
         <div class="rc-foot">
-          <div class="avs">${shown.map(u => av(u)).join('')}${users.length > shown.length ? `<span class="av" style="--h:260">+${users.length - shown.length}</span>` : ''}</div>
-          <button class="btn primary" onclick="openSettle()"><i class="fa-solid fa-handshake"></i> Settle up${nTrans ? ` (${nTrans})` : ''}</button>
+          <div class="avs">${shown.map(u => av(u, 'xs')).join('')}${users.length > shown.length ? `<span class="av xs" style="--h:260">+${users.length - shown.length}</span>` : ''}</div>
+          <button class="btn primary sm" onclick="openSettle()"><i class="fa-solid fa-handshake"></i> Settle up${nTrans ? ` (${nTrans})` : ''}</button>
         </div>`;
     }
 
