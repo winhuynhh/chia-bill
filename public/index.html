@@ -436,6 +436,7 @@
         </button>
         <div id="userMenu" class="menu" role="menu">
           <div class="menu-head"><b id="userNameLbl"></b><small id="userEmailLbl"></small></div>
+          <button onclick="closeMenu(); editMyName()"><i class="fa-solid fa-pen"></i> Đổi tên hiển thị</button>
           <button onclick="closeMenu(); openPay('me')"><i class="fa-solid fa-wallet"></i> Tài khoản nhận tiền</button>
           <button onclick="closeMenu(); goHome()"><i class="fa-solid fa-layer-group"></i> Nhóm của tôi</button>
           <button onclick="closeMenu(); doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
@@ -951,7 +952,7 @@
 
     function setSession(user, profile) {
       myProfile = profile || {};
-      me = { sub: user.sub, email: user.email, name: user.name || user.email, picture: myProfile.picture || '' };
+      me = { sub: user.sub, email: user.email, name: myProfile.name || user.name || user.email, picture: myProfile.picture || '' };
       $('userNameLbl').textContent = me.name;
       $('userEmailLbl').textContent = me.email;
       const av0 = $('userAvatar');
@@ -963,6 +964,19 @@
       ini.style.setProperty('--h', hue(me.name));
       const first = String(me.name).trim().split(/\s+/).pop();
       $('greetHi').textContent = first ? `Chào ${first}` : 'Nhóm của tôi';
+    }
+
+    async function editMyName() {
+      const v = await uiPrompt('Tên hiển thị trong các nhóm. Tên cũ trong các khoản chi sẽ được đổi theo.', me.name, { title: 'Đổi tên hiển thị', ok: 'Lưu' });
+      if (v === null || v === undefined) return;
+      const name = String(v).replace(/\s+/g, ' ').trim();
+      if (!name || name === me.name) return;
+      try {
+        const r = await api('/api/profile', { method: 'POST', body: { name } });
+        setSession({ sub: me.sub, email: me.email, name: me.name }, { ...myProfile, ...r.profile });
+        toast('Đã đổi tên');
+        if (currentG) { await refreshGroup(); } else { loadHome(); }
+      } catch (e) { toast(e.message, 'err'); }
     }
 
     // Sau khi đăng nhập: vào danh sách nhóm; nếu chưa có tài khoản nhận tiền thì bắt buộc đăng ký.
