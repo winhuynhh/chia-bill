@@ -26,6 +26,14 @@ function validateExpense(g, body, settle) {
   return { desc, amount, payer, split };
 }
 
+// Ngày giao dịch do người dùng chọn tay (ms). Không gửi thì dùng giờ hiện tại. Từ năm 2000 đến tối đa 1 ngày sau hiện tại.
+function parseAt(raw) {
+  if (raw === undefined || raw === null || raw === '') return { at: null };
+  const t = Number(raw);
+  if (!Number.isFinite(t) || t < 946684800000 || t > Date.now() + 86400000) return { error: 'Ngày giao dịch không hợp lệ' };
+  return { at: Math.round(t) };
+}
+
 // Gộp người tham gia `from` vào `to`: chuyển toàn bộ khoản chi, thông tin nhận tiền.
 function mergeParticipants(g, from, to) {
   g.users = g.users.filter((u) => u !== from);
@@ -94,6 +102,8 @@ export default async function handler(req, res) {
         if (!settle && !pm.canAdd) return bad(res, 'Trưởng nhóm chưa cho phép thành viên thêm khoản chi', 403);
         const v = validateExpense(g, body, settle);
         if (v.error) return bad(res, v.error);
+        const pa = parseAt(body.at);
+        if (pa.error) return bad(res, pa.error);
         const id = /^[\w-]{8,64}$/.test(String(body.id || '')) ? String(body.id) : crypto.randomUUID();
         if (g.expenses.some((e) => e.id === id)) break; // chống gửi trùng
         g.expenses.push({
@@ -101,7 +111,7 @@ export default async function handler(req, res) {
           splitDetails: JSON.stringify(v.split),
           settle,
           by: user.email,
-          at: Date.now(),
+          at: pa.at || Date.now(),
         });
         break;
       }
@@ -113,6 +123,9 @@ export default async function handler(req, res) {
         if (e.settle) return bad(res, 'Giao dịch settle không sửa được, hãy xóa rồi ghi lại', 400);
         const v = validateExpense(g, body, false);
         if (v.error) return bad(res, v.error);
+        const pa = parseAt(body.at);
+        if (pa.error) return bad(res, pa.error);
+        if (pa.at) e.at = pa.at;
         Object.assign(e, { desc: v.desc, amount: v.amount, payer: v.payer, splitDetails: JSON.stringify(v.split), editedBy: user.email, editedAt: Date.now() });
         break;
       }
