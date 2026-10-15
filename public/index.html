@@ -512,6 +512,11 @@
             <option value="month">Tháng này</option>
             <option value="range">Chọn khoảng ngày...</option>
           </select>
+          <select id="fltType" class="sel" onchange="setFilter()" aria-label="Loại giao dịch">
+            <option value="all">Chi và settle up</option>
+            <option value="bill">Chỉ khoản chi</option>
+            <option value="settle">Chỉ settle up</option>
+          </select>
           <span id="fltRange" class="flt-row hidden" style="flex:2;">
             <input type="date" id="fltFrom" class="inp" onchange="setFilter()" aria-label="Từ ngày">
             <input type="date" id="fltTo" class="inp" onchange="setFilter()" aria-label="Đến ngày">
@@ -768,7 +773,7 @@
     let loadCount = 0;
     let curTab = 'exp';
     let editingId = '';
-    let filt = { mode: 'all', from: '', to: '' };
+    let filt = { mode: 'all', type: 'all', from: '', to: '' };
     // Link mời trong email có dạng /?invite=<mã nhóm>
     let deepLink = '';
     let deepKey = '';
@@ -1296,7 +1301,7 @@
         localData = data;
         lastInvite = null;
         $('inviteResult').innerHTML = '';
-        if (!sameGroup) { filt = { mode: 'all', from: '', to: '' }; $('fltMode').value = 'all'; $('fltFrom').value = ''; $('fltTo').value = ''; $('fltRange').classList.add('hidden'); }
+        if (!sameGroup) { filt = { mode: 'all', type: 'all', from: '', to: '' }; $('fltMode').value = 'all'; $('fltType').value = 'all'; $('fltFrom').value = ''; $('fltTo').value = ''; $('fltRange').classList.add('hidden'); }
         openApp(sameGroup);
         render();
       } catch (e) { fail(e); }
@@ -1336,6 +1341,7 @@
     function setTab(name) {
       curTab = name;
       $('mainApp').dataset.tab = name;
+      $('fltType').style.display = name === 'exp' ? '' : 'none';
       const h = TAB_HEAD[name];
       $('phIcon').className = 'fa-solid ' + h[0];
       $('phTitle').textContent = h[1];
@@ -1710,6 +1716,7 @@
 
     function setFilter() {
       filt.mode = $('fltMode').value;
+      filt.type = $('fltType').value;
       filt.from = $('fltFrom').value;
       filt.to = $('fltTo').value;
       $('fltRange').classList.toggle('hidden', filt.mode !== 'range');
@@ -1746,7 +1753,9 @@
         const r = filterRange();
         t += r.last ? `Tính từ sau lần settle ${fmtDate(r.last)}.` : 'Chưa có lần settle nào nên hiện tất cả.';
       }
-      if (filt.mode !== 'all') t += ' Số dư và Quyết toán vẫn tính trên toàn bộ giao dịch.';
+      if (filt.type === 'bill') t += ' Đang ẩn các giao dịch settle up.';
+      if (filt.type === 'settle') t += ' Chỉ hiện các giao dịch settle up.';
+      if (filt.mode !== 'all' || filt.type !== 'all') t += ' Số dư và Quyết toán vẫn tính trên toàn bộ giao dịch.';
       $('fltInfo').textContent = t;
       $('fltInfo').style.display = t ? 'block' : 'none';
     }
@@ -1884,8 +1893,8 @@
 
     function renderExpenses() {
       const { users, expenses } = localData;
-      const bills = expenses.filter(e => !e.settle && inFilter(e)).slice().reverse().sort((a, b) => (b.at || 0) - (a.at || 0));
-      const settles = expenses.filter(e => e.settle && inFilter(e)).slice().reverse();
+      const bills = filt.type === 'settle' ? [] : expenses.filter(e => !e.settle && inFilter(e)).slice().reverse().sort((a, b) => (b.at || 0) - (a.at || 0));
+      const settles = filt.type === 'bill' ? [] : expenses.filter(e => e.settle && inFilter(e)).slice().reverse();
       const delRow = (e) => !canEdit() ? '' : `<div class="foot" style="gap:18px;">${e.settle ? '' : `<button class="lnk" onclick="openEdit('${esc(e.id)}')"><i class="fa-regular fa-pen-to-square"></i> Sửa</button>`}<button class="lnk neg" onclick="deleteExpense('${esc(e.id)}')"><i class="fa-regular fa-trash-can"></i> Xóa</button></div>`;
 
       let h = '';
