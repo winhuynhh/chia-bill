@@ -1341,7 +1341,7 @@
     function setTab(name) {
       curTab = name;
       $('mainApp').dataset.tab = name;
-      $('fltType').style.display = name === 'exp' ? '' : 'none';
+      $('fltType').style.display = (name === 'exp' || name === 'table') ? '' : 'none';
       const h = TAB_HEAD[name];
       $('phIcon').className = 'fa-solid ' + h[0];
       $('phTitle').textContent = h[1];
@@ -1951,8 +1951,8 @@
       const colSpan = users.length + 4;
       $('tableHead').innerHTML = `<tr><th class="sticky-col">Khoản chi</th><th>Tổng</th>${users.map(u => `<th>${esc(u)}</th>`).join('')}<th>Người trả</th><th class="no-capture"></th></tr>`;
 
-      const bills = expenses.filter(e => !e.settle && inFilter(e));
-      const settles = expenses.filter(e => e.settle && inFilter(e));
+      const bills = filt.type === 'settle' ? [] : expenses.filter(e => !e.settle && inFilter(e));
+      const settles = filt.type === 'bill' ? [] : expenses.filter(e => e.settle && inFilter(e));
       const allSettles = expenses.some(e => e.settle);
       const delBtn = (e) => `<td class="no-capture">${canEdit() ? `${e.settle ? '' : `<button onclick="openEdit('${esc(e.id)}')" class="ibtn" aria-label="Sửa khoản chi"><i class="fa-regular fa-pen-to-square"></i></button>`}<button onclick="deleteExpense('${esc(e.id)}')" class="ibtn del" aria-label="Xóa khoản chi"><i class="fa-regular fa-trash-can"></i></button>` : ''}</td>`;
 
