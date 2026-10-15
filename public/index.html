@@ -620,6 +620,7 @@
           <div id="amtPreview" class="amt-prev"></div>
         </div>
         <label class="field"><span>Ai trả?</span><select id="expPayer" class="sel"></select></label>
+        <label class="field"><span>Ngày chi <small class="hint">(tự lấy hôm nay, đổi nếu ghi bù)</small></span><input type="date" id="expDate" class="inp"></label>
         <div class="split-box">
           <div class="split-top">
             <span class="hint" style="font-weight:700;">Chia cho</span>
@@ -1493,8 +1494,20 @@
     }
 
     // Đưa form về trạng thái "thêm mới".
+    const ymd = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+    // Ngày chọn tay -> 12:00 giờ máy của ngày đó. Ngày không đổi thì không gửi, để server lấy giờ thật (hoặc giữ nguyên khi sửa).
+    function pickedAt(orig) {
+      const v = $('expDate').value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return undefined;
+      if (v === ymd(orig || Date.now())) return undefined;
+      const [y, m, d] = v.split('-').map(Number);
+      return new Date(y, m - 1, d, 12, 0, 0).getTime();
+    }
+
     function resetExpForm() {
       editingId = '';
+      $('expDate').value = ymd(Date.now());
+      $('expDate').max = ymd(Date.now());
       $('expTitle').textContent = 'Thêm khoản chi';
       $('expSave').innerHTML = '<i class="fa-solid fa-check"></i> Lưu khoản chi';
       $('expDesc').value = ''; $('expAmount').value = '';
@@ -1515,6 +1528,7 @@
       $('expSave').innerHTML = '<i class="fa-solid fa-check"></i> Lưu thay đổi';
       $('expDesc').value = e.desc;
       $('expAmount').value = String(e.amount);
+      $('expDate').value = ymd(e.at || Date.now());
       if (!Array.from($('expPayer').options).some(o => o.value === e.payer)) {
         $('expPayer').insertAdjacentHTML('beforeend', `<option value="${esc(e.payer)}">${esc(e.payer)}</option>`);
       }
@@ -1539,6 +1553,7 @@
       if (!canAdd()) { toast('Trưởng nhóm chưa cho phép thành viên thêm khoản chi', 'err'); return; }
       if (!localData.users.length) { toast('Nhóm chưa có người chia tiền. Thêm ở tab Thành viên.', 'err'); setTab('people'); return; }
       if (!$('expPayer').value && myMember()) $('expPayer').value = myMember();
+      $('expDate').value = ymd(Date.now()); $('expDate').max = ymd(Date.now());
       onAmtInput();
       openOv('expSheet');
       setTimeout(() => { try { $('expDesc').focus(); } catch (_) {} }, 60);
@@ -1606,7 +1621,7 @@
       }
 
       const wasEdit = !!editingId;
-      const ok = await mutate({ action: wasEdit ? 'editExpense' : 'addExpense', id: wasEdit ? editingId : uid(), desc: d, amount: a, payer: p, splitDetails: JSON.stringify(owes) });
+      const ok = await mutate({ action: wasEdit ? 'editExpense' : 'addExpense', id: wasEdit ? editingId : uid(), desc: d, amount: a, payer: p, splitDetails: JSON.stringify(owes), at: pickedAt(wasEdit ? (localData.expenses.find(x => x.id === editingId) || {}).at : null) });
       if (ok) {
         editingId = '';
         resetExpForm();
@@ -1866,7 +1881,7 @@
 
     function renderExpenses() {
       const { users, expenses } = localData;
-      const bills = expenses.filter(e => !e.settle && inFilter(e)).slice().reverse();
+      const bills = expenses.filter(e => !e.settle && inFilter(e)).slice().reverse().sort((a, b) => (b.at || 0) - (a.at || 0));
       const settles = expenses.filter(e => e.settle && inFilter(e)).slice().reverse();
       const delRow = (e) => !canEdit() ? '' : `<div class="foot" style="gap:18px;">${e.settle ? '' : `<button class="lnk" onclick="openEdit('${esc(e.id)}')"><i class="fa-regular fa-pen-to-square"></i> Sửa</button>`}<button class="lnk neg" onclick="deleteExpense('${esc(e.id)}')"><i class="fa-regular fa-trash-can"></i> Xóa</button></div>`;
 
@@ -1874,7 +1889,7 @@
       if (!bills.length && !settles.length && expenses.length) {
         h = `<div class="empty card"><b>Không có giao dịch nào khớp bộ lọc</b>Đổi bộ lọc ở trên để xem các giao dịch khác.</div>`;
       } else if (!bills.length && !settles.length) {
-        h = `<div class="empty card"><b>Chưa có khoản chi nào</b>Ghi lại khoản đầu tiên, app sẽ tự tính ai nợ ai.${canAdd() ? '<br><button class="btn primary" onclick="openExp()"><i class="fa-solid fa-plus"></i> Thêm khoản chi đầu tiên</button>' : ' Trưởng nhóm chưa cho phép thành viên thêm khoản chi.'}</div>`;
+        h = `<div class="empty card"><b>Chưa có khoản chi nào</b>${canAdd() ? 'Bấm Thêm khoản chi để ghi khoản đầu tiên, app sẽ tự tính ai nợ ai.' : 'Trưởng nhóm chưa cho phép thành viên thêm khoản chi.'}</div>`;
       }
       h += bills.map(e => {
         const det = parseSplit(e);
