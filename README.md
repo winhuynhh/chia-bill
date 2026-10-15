@@ -105,3 +105,7 @@ Mọi request (trừ `/api/config`, `/api/auth`) cần header `Authorization: Be
 
 Người nhận dùng ngân hàng: nút "Mã QR chuyển khoản" tạo mã VietQR (qua img.vietqr.io) điền sẵn ngân hàng, số tài khoản, số tiền, nội dung. Tên ngân hàng không nhận ra được thì chỉ hiện nút sao chép.
 Người nhận dùng MoMo: nút "Mở app MoMo" chỉ mở app; kèm nút sao chép SĐT, số tiền, nội dung để chuyển tay, hoặc quét QR ngân hàng. Không có QR riêng cho MoMo.
+
+## Ngày chi
+
+Khoản chi tự lấy thời điểm nhập; form có ô "Ngày chi" để chọn tay khi ghi bù (cả lúc sửa). API `addExpense` / `editExpense` nhận thêm `at` (ms, tùy chọn, từ năm 2000 tới tối đa 1 ngày sau hiện tại). Danh sách khoản chi xếp theo ngày mới nhất trước.
