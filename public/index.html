@@ -1670,11 +1670,12 @@
 
     // ---------- Tính toán ----------
     // d > 0: còn phải đóng, d < 0: sẽ được nhận. Settle đã ghi nhận được cộng/trừ vào đây.
-    function computeBalances() {
+    function computeBalances(ignoreSettle) {
       const { users, expenses } = localData;
       const s = {}, p = {}, sent = {}, recv = {}, d = {};
       users.forEach(u => { s[u] = 0; p[u] = 0; sent[u] = 0; recv[u] = 0; });
       expenses.forEach(e => {
+        if (ignoreSettle && e.settle) return;
         const det = parseSplit(e);
         if (e.settle) {
           if (e.payer in sent) sent[e.payer] += e.amount;
@@ -1753,9 +1754,9 @@
         const r = filterRange();
         t += r.last ? `Tính từ sau lần settle ${fmtDate(r.last)}.` : 'Chưa có lần settle nào nên hiện tất cả.';
       }
-      if (filt.type === 'bill') t += ' Đang ẩn các giao dịch settle up.';
-      if (filt.type === 'settle') t += ' Chỉ hiện các giao dịch settle up.';
-      if (filt.mode !== 'all' || filt.type !== 'all') t += ' Số dư và Quyết toán vẫn tính trên toàn bộ giao dịch.';
+            if (filt.type === 'settle') t += ' Chỉ hiện các giao dịch settle up.';
+      if (filt.type === 'bill') t += ' Bảng chia tiền tính quyết toán như chưa có settle; tab Số dư vẫn tính đủ.';
+      else if (filt.mode !== 'all' || filt.type !== 'all') t += ' Số dư và Quyết toán vẫn tính trên toàn bộ giao dịch.';
       $('fltInfo').textContent = t;
       $('fltInfo').style.display = t ? 'block' : 'none';
     }
@@ -1953,7 +1954,7 @@
 
       const bills = filt.type === 'settle' ? [] : expenses.filter(e => !e.settle && inFilter(e));
       const settles = filt.type === 'bill' ? [] : expenses.filter(e => e.settle && inFilter(e));
-      const allSettles = expenses.some(e => e.settle);
+      const allSettles = filt.type !== 'bill' && expenses.some(e => e.settle);
       const delBtn = (e) => `<td class="no-capture">${canEdit() ? `${e.settle ? '' : `<button onclick="openEdit('${esc(e.id)}')" class="ibtn" aria-label="Sửa khoản chi"><i class="fa-regular fa-pen-to-square"></i></button>`}<button onclick="deleteExpense('${esc(e.id)}')" class="ibtn del" aria-label="Xóa khoản chi"><i class="fa-regular fa-trash-can"></i></button>` : ''}</td>`;
 
       let bdy = bills.map(e => {
@@ -1986,6 +1987,8 @@
       }
       $('tableBody').innerHTML = bdy;
 
+      // Lọc "Chỉ khoản chi": quyết toán tính như chưa có settle nào.
+      if (filt.type === 'bill') bal = computeBalances(true);
       const { s, p, sent, recv, d } = bal;
       const fTot = expenses.filter(e => !e.settle).reduce((a, e) => a + e.amount, 0);
       let foot = `<tr class="tf"><td class="sticky-col">Tổng dùng</td><td class="col-money num">${fmt(fTot)}</td>${users.map(u => `<td class="num">${fmt(s[u])}</td>`).join('')}<td></td><td class="no-capture"></td></tr>
