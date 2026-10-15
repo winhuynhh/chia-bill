@@ -376,8 +376,16 @@
     @media (hover: none) and (pointer: coarse) { .fab { bottom: calc(max(20px, env(safe-area-inset-bottom)) + 72px); } #toast { bottom: calc(160px + env(safe-area-inset-bottom)); } #mainApp { padding-bottom: 170px; } }
     @media (max-width: 380px) { .rc-total { font-size: 21.5px; } .rc-st .what b { font-size: 17.5px; } #areaEqual { grid-template-columns: 1fr; } }
     @media (min-width: 1000px) {
-      body[data-screen="app"] .wrap { max-width: 1120px; }
-      body[data-screen="group"] .wrap { max-width: 920px; }
+      body { --wmax: 1120px; }
+      body[data-screen="app"] .wrap { max-width: var(--wmax); }
+      body[data-screen="group"] .wrap { max-width: min(var(--wmax), 960px); }
+      /* Danh sách tự chia cột theo bề ngang thay vì kéo dài một cột */
+      #expList, #balList, #memberList { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; align-items: start; }
+      #expList > *, #balList > *, #memberList > * { margin: 0 !important; min-width: 0; }
+      #expList > .sec-t, #expList > .empty, #balList > .empty, #memberList > .empty { grid-column: 1 / -1; }
+      #expList > .sec-t { margin: 14px 0 0 !important; }
+      .table-matrix .sticky-col { min-width: 170px; }
+      .table-matrix td { padding: 10px 12px; }
       #mainApp > .wrap { display: grid; grid-template-columns: 330px minmax(0, 1fr); column-gap: 28px; align-items: start; }
       #mainApp .gbar { grid-column: 1 / -1; }
       #mainApp .receipt-wrap { grid-column: 1; grid-row: 2; position: sticky; top: 76px; margin-top: 0; }
@@ -389,10 +397,23 @@
       #mainApp[data-tab="table"] .mcol { grid-column: 1 / -1; }
       #mainApp[data-tab]:not([data-tab="exp"]) .fab { display: none !important; }
       #addInline { width: auto; }
-      .fab { right: max(16px, calc(50% - 560px)); }
+      .fab { right: max(16px, calc(50% - var(--wmax) / 2)); }
       #myGroups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
       #myGroups .gcard { margin-bottom: 0; }
       #myGroups .empty { grid-column: 1 / -1; }
+    }
+    @media (min-width: 1400px) {
+      body { --wmax: 1340px; }
+      #mainApp > .wrap { grid-template-columns: 360px minmax(0, 1fr); }
+      body[data-screen="group"] .wrap { max-width: 1120px; }
+      #myGroups { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .table-matrix { font-size: 13px; }
+      .table-matrix .sticky-col { min-width: 220px; }
+    }
+    @media (min-width: 1800px) {
+      body { --wmax: 1560px; }
+      #mainApp > .wrap { grid-template-columns: 400px minmax(0, 1fr); }
+      #expList, #balList, #memberList { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
     }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
@@ -685,6 +706,10 @@
     <div class="sheet">
       <div class="grab"></div>
       <div class="sheet-h"><h3 id="settleTitle">Settle up</h3><button class="ibtn" onclick="closeSettle()" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <label id="settleDateRow" class="field" style="margin-top:12px;display:none;"><span>Ngày chuyển tiền</span>
+        <input type="date" id="settleDate" class="inp">
+        <small class="hint">Mặc định là hôm nay. Chọn ngày khác nếu đã chuyển từ trước.</small>
+      </label>
       <div id="settleBody" style="margin-top:12px;"></div>
     </div>
   </div>
@@ -2145,6 +2170,7 @@
     function openSettle() {
       settleOpen = true;
       transfers = sortedTransfers();
+      $('settleDate').value = ymd(Date.now()); $('settleDate').max = ymd(Date.now());
       renderSettle();
       openOv('settleModal');
     }
@@ -2157,6 +2183,7 @@
     function renderSettle() {
       const body = $('settleBody');
       const mine = myMember();
+      $('settleDateRow').style.display = transfers.length ? '' : 'none';
 
       if (transfers.length === 0) {
         body.innerHTML = `<div class="done"><i class="fa-solid fa-circle-check"></i>
@@ -2203,6 +2230,13 @@
         <button class="btn soft block" onclick="copySummary()"><i class="fa-regular fa-copy"></i> Sao chép tóm tắt để gửi nhóm</button>`;
     }
 
+    // Ngày chuyển tiền: không đổi so với hôm nay thì để server lấy giờ thật.
+    function settleAt() {
+      const v = $('settleDate').value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || v === ymd(Date.now())) return undefined;
+      const [y, m, d] = v.split('-').map(Number);
+      return new Date(y, m - 1, d, 12, 0, 0).getTime();
+    }
     async function markPaid(i) {
       const t = transfers[i];
       if (!t) return;
@@ -2212,7 +2246,8 @@
         desc: `Settle: ${t.from} → ${t.to}`,
         amount: t.amount, payer: t.from,
         splitDetails: JSON.stringify({ [t.to]: t.amount }),
-        settle: true
+        settle: true,
+        at: settleAt()
       });
       if (ok) toast('Đã ghi nhận');
     }
