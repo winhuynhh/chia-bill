@@ -2327,34 +2327,44 @@
       setTab('table');
       showLoad(true);
       await new Promise((r) => setTimeout(r, 60));
-      const captureArea = $('captureArea');
-      const tableContainer = $('tContainer');
-      const mainTable = $('mainTable');
-      const stickyCols = document.querySelectorAll('.sticky-col');
-      const noCaptureItems = document.querySelectorAll('.no-capture');
-
-      noCaptureItems.forEach(item => item.style.display = 'none');
-      stickyCols.forEach(col => col.classList.add('no-sticky'));
-      const oldStyle = { container: tableContainer.style.cssText, area: captureArea.style.cssText };
-
-      tableContainer.style.overflow = 'visible';
-      tableContainer.style.width = 'auto';
-      captureArea.style.width = (mainTable.offsetWidth + 60) + 'px';
-
+      // Chụp bản sao đặt ngoài màn hình, rộng đúng bằng bảng, nên không bao giờ bị cắt mép phải.
+      const src = $('captureArea');
+      const holder = document.createElement('div');
+      holder.style.cssText = 'position:absolute;left:-100000px;top:0;width:max-content;max-width:none;background:#fff;';
+      const clone = src.cloneNode(true);
+      clone.removeAttribute('id');
+      clone.style.cssText = 'width:max-content;max-width:none;box-shadow:none;border-radius:0;';
+      clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+      clone.querySelectorAll('.no-capture').forEach(el => el.remove());
+      clone.querySelectorAll('.sticky-col').forEach(el => { el.style.position = 'static'; });
+      const tc = clone.querySelector('.table-container');
+      tc.style.cssText = 'overflow:visible;width:max-content;max-width:none;';
+      const tb = clone.querySelector('.table-matrix');
+      tb.style.cssText = 'width:auto;min-width:0;';
+      holder.appendChild(clone);
+      document.body.appendChild(holder);
       try {
-        const canvas = await html2canvas(captureArea, {
-          scale: 2, useCORS: true, backgroundColor: "#ffffff",
-          windowWidth: mainTable.scrollWidth + 400
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const cs = getComputedStyle(clone);
+        const pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+        const w = Math.ceil(Math.max(clone.scrollWidth, clone.offsetWidth, tb.scrollWidth + pad, tb.getBoundingClientRect().width + pad)) + 8;
+        // Cố định bề rộng bằng px để html2canvas dựng lại đúng khung, dư thêm lề phải cho chắc.
+        const tw = Math.ceil(tb.getBoundingClientRect().width) + 4;
+        tb.style.width = tw + 'px'; tb.style.minWidth = tw + 'px';
+        tc.style.width = tw + 'px';
+        clone.style.width = (w + 4) + 'px';
+        const h = Math.ceil(Math.max(clone.scrollHeight, clone.offsetHeight)) + 2;
+        
+        const canvas = await html2canvas(clone, {
+          scale: 2, useCORS: true, backgroundColor: '#ffffff',
+          width: w, height: h, windowWidth: window.innerWidth, windowHeight: window.innerHeight, scrollX: 0, scrollY: 0
         });
         const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.92));
         if (!blob) throw new Error('no blob');
         showImg(blob);
       } catch (e) { toast('Không xuất được ảnh, thử lại sau', 'err'); }
       finally {
-        stickyCols.forEach(col => col.classList.remove('no-sticky'));
-        noCaptureItems.forEach(item => item.style.display = '');
-        tableContainer.style.cssText = oldStyle.container;
-        captureArea.style.cssText = oldStyle.area;
+        holder.remove();
         showLoad(false);
         if (prevTab !== 'table') setTab(prevTab);
       }
