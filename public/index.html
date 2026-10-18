@@ -495,6 +495,9 @@
       .tabs .seg button.on { background: var(--brand); color: var(--on-brand); }
       .fab { right: max(16px, calc(50% - var(--wmax) / 2)); }
     }
+    details.manual { margin-top: 14px; background: var(--soft); border-radius: 18px; padding: 12px 14px; }
+    details.manual > summary { cursor: pointer; font-weight: 700; font-size: 13px; list-style: none; display: flex; align-items: center; gap: 8px; }
+    details.manual > summary::-webkit-details-marker { display: none; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
 </head>
@@ -2356,6 +2359,7 @@
 
     function openSettle() {
       settleOpen = true;
+      manualOpen = false; manualPre = { from: '', to: '', amount: '' };
       transfers = sortedTransfers();
       $('settleDate').value = ymd(Date.now()); $('settleDate').max = ymd(Date.now());
       renderSettle();
@@ -2370,12 +2374,12 @@
     function renderSettle() {
       const body = $('settleBody');
       const mine = myMember();
-      $('settleDateRow').style.display = transfers.length ? '' : 'none';
+      $('settleDateRow').style.display = localData.users.length > 1 ? '' : 'none';
 
       if (transfers.length === 0) {
         body.innerHTML = `<div class="done"><i class="fa-solid fa-circle-check"></i>
           <b>${localData.expenses.length ? 'Cả nhóm đã cân bằng' : 'Chưa có khoản chi nào'}</b>
-          <p class="hint" style="margin-top:4px;">${localData.expenses.length ? 'Không còn ai nợ ai.' : 'Thêm khoản chi để app tính giúp bạn.'}</p></div>`;
+          <p class="hint" style="margin-top:4px;">${localData.expenses.length ? 'Không còn ai nợ ai.' : 'Thêm khoản chi để app tính giúp bạn.'}</p></div>${manualHtml()}`;
         return;
       }
 
@@ -2408,13 +2412,51 @@
           <div class="t-act">
             ${btns}
             <button class="btn ok sm" onclick="markPaid(${i})"><i class="fa-solid fa-check"></i> Đã trả</button>
+            <button class="btn soft sm" onclick="openManual(${i})"><i class="fa-solid fa-shuffle"></i> Trả cách khác</button>
           </div>
         </div>`;
       }).join('');
 
       body.innerHTML = `<p class="hint" style="margin-bottom:12px;">Chỉ cần ${transfers.length} giao dịch là cả nhóm hết nợ. Chuyển xong thì bấm <b>Đã trả</b> để ghi vào bảng.</p>
         ${cards}
-        <button class="btn soft block" onclick="copySummary()"><i class="fa-regular fa-copy"></i> Sao chép tóm tắt để gửi nhóm</button>`;
+        ${manualHtml()}
+        <button class="btn soft block" style="margin-top:10px;" onclick="copySummary()"><i class="fa-regular fa-copy"></i> Sao chép tóm tắt để gửi nhóm</button>`;
+    }
+
+    // Ghi nhận chuyển tiền thực tế khác gợi ý (vd A trả thẳng cho C thay vì qua B). App tự tính lại phần còn lại.
+    function manualHtml() {
+      const us = localData.users;
+      if (us.length < 2) return '';
+      const opts = (sel) => us.map(u => `<option value="${esc(u)}"${u === sel ? ' selected' : ''}>${esc(u)}</option>`).join('');
+      return `<details id="manualBox" class="manual"${manualOpen ? ' open' : ''} ontoggle="manualOpen = this.open"><summary><i class="fa-solid fa-shuffle"></i> Chuyển khác gợi ý? Ghi nhận thủ công</summary>
+        <p class="hint" style="margin:8px 0 10px;">Dùng khi thực tế chuyển khác gợi ý, ví dụ A trả thẳng cho C thay vì qua B. Ghi nhận xong, app tự tính lại ai còn nợ ai.</p>
+        <div class="row" style="gap:8px;margin-bottom:8px;">
+          <label class="field" style="flex:1;min-width:0;"><span>Người chuyển</span><select id="mFrom" class="sel">${opts(manualPre.from)}</select></label>
+          <label class="field" style="flex:1;min-width:0;"><span>Người nhận</span><select id="mTo" class="sel"><option value="">Chọn...</option>${opts(manualPre.to)}</select></label>
+        </div>
+        <label class="field"><span>Số tiền (đ)</span><input type="text" id="mAmt" class="inp" inputmode="decimal" autocomplete="off" placeholder="150000 hoặc 150k" value="${manualPre.amount ? esc(String(manualPre.amount)) : ''}"></label>
+        <button class="btn primary block" style="margin-top:10px;" onclick="manualPay()"><i class="fa-solid fa-check"></i> Ghi nhận đã chuyển</button>
+      </details>`;
+    }
+    let manualOpen = false, manualPre = { from: '', to: '', amount: '' };
+    function openManual(i) {
+      const t = transfers[i];
+      manualPre = t ? { from: t.from, to: '', amount: t.amount } : { from: '', to: '', amount: '' };
+      manualOpen = true;
+      renderSettle();
+      const b = $('manualBox'); if (b) { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    }
+    async function manualPay() {
+      const from = $('mFrom').value, to = $('mTo').value, amount = parseAmount($('mAmt').value);
+      if (!from || !to) { toast('Chọn người chuyển và người nhận', 'err'); return; }
+      if (from === to) { toast('Người chuyển và người nhận phải khác nhau', 'err'); return; }
+      if (!(amount > 0)) { toast('Nhập số tiền, ví dụ 150000 hoặc 150k', 'err'); return; }
+      if (!(await uiConfirm(`${from} đã chuyển ${fmt(amount)}đ cho ${to}?`, { title: 'Ghi nhận chuyển tiền', ok: 'Đã chuyển', cancel: 'Chưa' }))) return;
+      const ok = await mutate({
+        action: 'addExpense', id: uid(), desc: `Settle: ${from} → ${to}`, amount, payer: from,
+        splitDetails: JSON.stringify({ [to]: amount }), settle: true, at: settleAt()
+      });
+      if (ok) { manualPre = { from: '', to: '', amount: '' }; manualOpen = false; transfers = sortedTransfers(); renderSettle(); toast('Đã ghi nhận, app đã tính lại'); }
     }
 
     // Ngày chuyển tiền: không đổi so với hôm nay thì để server lấy giờ thật.
