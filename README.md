@@ -109,3 +109,9 @@ Người nhận dùng MoMo: nút "Mở app MoMo" chỉ mở app; kèm nút sao c
 ## Ngày chi
 
 Khoản chi tự lấy thời điểm nhập; form có ô "Ngày chi" để chọn tay khi ghi bù (cả lúc sửa). API `addExpense` / `editExpense` nhận thêm `at` (ms, tùy chọn, từ năm 2000 tới tối đa 1 ngày sau hiện tại). Danh sách khoản chi xếp theo ngày mới nhất trước.
+
+## Hoàn tác, lịch sử, danh bạ nhận tiền
+- Xóa khoản chi hoặc settle: có nút **Hoàn tác** trong vài giây (thêm lại đúng khoản cũ, cùng ngày).
+- **Lịch sử thay đổi** (cuối tab Khoản chi): ai thêm, sửa, xóa, hoàn tác, kèm nội dung thay đổi. Lưu 300 dòng gần nhất trong dữ liệu nhóm, hiện 100 dòng.
+- Settle chỉ đổi được ngày (nút **Đổi ngày**); các phần khác phải xóa rồi ghi lại.
+- **Danh bạ nhận tiền**: mỗi lần bạn nhập tài khoản nhận tiền cho một thành viên, app lưu vào hồ sơ của bạn (`profile.contacts`). Khi thêm thành viên trùng tên ở nhóm khác, app hỏi có dùng thông tin đã lưu không; trong form nhận tiền cũng có ô chọn từ danh bạ.
