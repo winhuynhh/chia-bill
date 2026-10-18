@@ -52,6 +52,19 @@ function mergeParticipants(g, from, to) {
   for (const [sub, n] of Object.entries(g.links)) if (n === from) g.links[sub] = to;
 }
 
+// Nhật ký thay đổi khoản chi (giữ 300 dòng gần nhất).
+const money = (n) => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + 'đ';
+const dmy = (t) => { const d = new Date(t + 7 * 3600000); return `${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}`; };
+function addLog(g, user, act, e, note) {
+  g.log = g.log || [];
+  g.log.push({
+    t: Date.now(), by: g.members?.[user.sub]?.name || user.name || user.email, byEmail: user.email, act,
+    desc: e.desc, amount: e.amount, settle: !!e.settle, ...(note ? { note } : {}),
+  });
+  if (g.log.length > 300) g.log.splice(0, g.log.length - 300);
+}
+const normKey = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
+
 const bad = (res, msg, status = 400) => res.status(status).json({ error: msg });
 
 export default async function handler(req, res) {
@@ -113,6 +126,7 @@ export default async function handler(req, res) {
           by: user.email,
           at: pa.at || Date.now(),
         });
+        addLog(g, user, body.restore === true ? 'restore' : 'add', { desc: v.desc, amount: v.amount, settle }, '');
         break;
       }
 
@@ -120,20 +134,38 @@ export default async function handler(req, res) {
         if (!pm.canEdit) return bad(res, 'Trưởng nhóm chưa cho phép thành viên sửa giao dịch', 403);
         const e = g.expenses.find((x) => x.id === body.id);
         if (!e) return bad(res, 'Không tìm thấy giao dịch', 404);
-        if (e.settle) return bad(res, 'Giao dịch settle không sửa được, hãy xóa rồi ghi lại', 400);
-        const v = validateExpense(g, body, false);
-        if (v.error) return bad(res, v.error);
         const pa = parseAt(body.at);
         if (pa.error) return bad(res, pa.error);
+        // Giao dịch settle chỉ đổi được ngày.
+        if (e.settle) {
+          if (!pa.at) return bad(res, 'Chọn ngày chuyển tiền mới');
+          const was = e.at;
+          e.at = pa.at;
+          e.editedBy = user.email; e.editedAt = Date.now();
+          addLog(g, user, 'edit', e, `Ngày ${was ? dmy(was) : '?'} → ${dmy(e.at)}`);
+          break;
+        }
+        const v = validateExpense(g, body, false);
+        if (v.error) return bad(res, v.error);
+        const notes = [];
+        if (e.desc !== v.desc) notes.push(`Tên "${e.desc}" → "${v.desc}"`);
+        if (e.amount !== v.amount) notes.push(`Số tiền ${money(e.amount)} → ${money(v.amount)}`);
+        if (e.payer !== v.payer) notes.push(`Người trả ${e.payer} → ${v.payer}`);
+        if (e.splitDetails !== JSON.stringify(v.split)) notes.push('Đổi cách chia');
+        if (pa.at && dmy(pa.at) !== dmy(e.at || 0)) notes.push(`Ngày ${e.at ? dmy(e.at) : '?'} → ${dmy(pa.at)}`);
         if (pa.at) e.at = pa.at;
         Object.assign(e, { desc: v.desc, amount: v.amount, payer: v.payer, splitDetails: JSON.stringify(v.split), editedBy: user.email, editedAt: Date.now() });
+        addLog(g, user, 'edit', e, notes.join('; ') || 'Lưu lại, không đổi gì');
         break;
       }
 
       case 'deleteExpense': {
         if (!pm.canEdit) return bad(res, 'Trưởng nhóm chưa cho phép thành viên xóa giao dịch', 403);
         const idx = g.expenses.findIndex((e) => e.id === body.id);
-        if (idx !== -1) g.expenses.splice(idx, 1);
+        if (idx !== -1) {
+          const [gone] = g.expenses.splice(idx, 1);
+          addLog(g, user, 'delete', gone, gone.payer ? `Người trả ${gone.payer}` : '');
+        }
         break;
       }
 
@@ -163,6 +195,16 @@ export default async function handler(req, res) {
         const r = sanitizePay(body.pay);
         if (r.error) return bad(res, r.error);
         g.payInfo[member] = r.value;
+        // Lưu vào danh bạ cá nhân để dùng lại ở các nhóm khác.
+        try {
+          const pk = `profile:${user.sub}`;
+          const prof = (await kv.get(pk)) || {};
+          const contacts = { ...(prof.contacts || {}) };
+          contacts[normKey(member)] = { name: member, pay: r.value };
+          const keys = Object.keys(contacts);
+          if (keys.length > 150) delete contacts[keys[0]];
+          await kv.set(pk, { ...prof, contacts });
+        } catch (err) { console.error('contacts', err); }
         break;
       }
 

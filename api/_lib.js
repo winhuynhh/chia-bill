@@ -113,6 +113,7 @@ export function groupView(g, user) {
     users: g.users || [],
     expenses: g.expenses || [],
     payInfo: g.payInfo || {},
+    log: (g.log || []).slice(-100).reverse(),
     links: g.links || {},
     meta: {
       code: g.code,
