@@ -23,6 +23,7 @@ function validateExpense(g, body, settle) {
   }
   if (Object.keys(split).length === 0) return { error: 'Chưa chọn người chịu tiền' };
   if (settle && Object.keys(split).length !== 1) return { error: 'Settle chỉ có 1 người nhận' };
+  if (settle && payer in split) return { error: 'Người trả và người nhận phải khác nhau' };
   return { desc, amount, payer, split };
 }
 
