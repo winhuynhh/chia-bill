@@ -498,6 +498,14 @@
     details.manual { margin-top: 14px; background: var(--soft); border-radius: 18px; padding: 12px 14px; }
     details.manual > summary { cursor: pointer; font-weight: 700; font-size: 13px; list-style: none; display: flex; align-items: center; gap: 8px; }
     details.manual > summary::-webkit-details-marker { display: none; }
+    .frow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); margin-bottom: 8px; }
+    .frow .mid { flex: 1; min-width: 0; }
+    .frow .mid b, .frow .mid small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .frow .mid small { color: var(--mute, #6b7280); font-size: 12px; }
+    .frow .act { display: flex; gap: 6px; flex-shrink: 0; }
+    .frow.pick { cursor: pointer; }
+    .frow.pick input { width: 20px; height: 20px; accent-color: var(--brand-ink); flex-shrink: 0; }
+    .frow.off { opacity: .55; cursor: default; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
 </head>
@@ -566,6 +574,16 @@
 
       <div class="sh first"><span class="ic"><i class="fa-solid fa-people-group"></i></span><h2>Nhóm của tôi</h2><span class="cnt" id="grpCnt">0</span></div>
       <div id="myGroups"></div>
+
+      <div class="sh"><span class="ic"><i class="fa-solid fa-user-group"></i></span><h2>Bạn bè</h2><span class="cnt" id="frCnt">0</span></div>
+      <div id="friendBox"></div>
+      <div class="joincard" style="margin-bottom:6px;">
+        <p>Kết bạn với người đã có tài khoản. Họ xác nhận xong thì bạn thêm họ vào nhóm chỉ bằng một chạm.</p>
+        <div class="create">
+          <input type="email" id="friendEmail" onkeyup="if(event.key === 'Enter') sendFriendReq()" class="inp" placeholder="Email của bạn bè" autocapitalize="none" autocomplete="off">
+          <button onclick="sendFriendReq()" class="btn primary"><i class="fa-solid fa-user-plus"></i> Kết bạn</button>
+        </div>
+      </div>
 
       <div class="sh"><span class="ic"><i class="fa-solid fa-circle-plus"></i></span><h2>Vào hoặc tạo nhóm</h2></div>
       <div class="joincard">
@@ -681,6 +699,9 @@
           <div class="card-h">Tài khoản trong nhóm</div>
           <div id="memberList"></div>
           <div id="inviteForm">
+            <div class="sub-t">Thêm từ bạn bè</div>
+            <p class="hint" style="margin-bottom:8px;">Bạn bè đã xác nhận được thêm vào nhóm ngay, không cần đồng ý lại.</p>
+            <button onclick="openFriendPick('add')" class="btn soft block"><i class="fa-solid fa-user-group"></i> Chọn từ bạn bè</button>
             <div class="sub-t">Mời thêm bằng email</div>
             <textarea id="inviteEmails" rows="2" class="ta" placeholder="Nhập email, cách nhau bằng dấu phẩy (tối đa 10)"></textarea>
             <label class="field" style="margin-top:10px;"><span>Người này đã được nhập tay trong nhóm?</span><select id="inviteAs" class="sel"></select></label>
@@ -791,6 +812,17 @@
   </div>
 
   <!-- Lịch sử thay đổi -->
+  <div id="friendSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="fpTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="fpTitle">Thêm bạn bè vào nhóm</h3><button class="ibtn" onclick="closeOv('friendSheet')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <p class="sub" id="fpMsg" style="margin:8px 0 12px;"></p>
+      <div id="fpList"></div>
+      <button id="fpOk" class="btn primary block" style="margin-top:12px;" onclick="confirmFriendPick()"></button>
+      <button id="fpSkip" class="btn soft block" style="margin-top:8px;display:none;" onclick="confirmFriendPick(true)">Tạo nhóm không thêm ai</button>
+    </div>
+  </div>
+
   <div id="logSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="logTitle">
     <div class="sheet">
       <div class="grab"></div>
@@ -973,7 +1005,7 @@
     }
 
     // ---------- Lớp phủ dùng chung ----------
-    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet', 'imgSheet', 'codeSheet', 'qrSheet', 'logSheet'];
+    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet', 'imgSheet', 'codeSheet', 'qrSheet', 'logSheet', 'friendSheet'];
     function syncLock() { document.body.classList.toggle('lock', OVERLAYS.some((id) => $(id).classList.contains('open'))); }
     function openOv(id, blocking) {
       const el = $(id);
@@ -983,7 +1015,7 @@
     }
     function closeOv(id) { $(id).classList.remove('open'); syncLock(); }
     const closeSimple = (id) => () => closeOv(id);
-    const CLOSERS = { dlg: () => dlgClose(null), payModal: () => closePay(), settleModal: () => closeSettle(), joinSheet: () => closeJoin(), imgSheet: () => closeImg(), codeSheet: closeSimple('codeSheet'), qrSheet: closeSimple('qrSheet'), logSheet: closeSimple('logSheet'), expSheet: () => closeExp() };
+    const CLOSERS = { dlg: () => dlgClose(null), payModal: () => closePay(), settleModal: () => closeSettle(), joinSheet: () => closeJoin(), imgSheet: () => closeImg(), codeSheet: closeSimple('codeSheet'), qrSheet: closeSimple('qrSheet'), logSheet: closeSimple('logSheet'), friendSheet: closeSimple('friendSheet'), expSheet: () => closeExp() };
     OVERLAYS.forEach((id) => $(id).addEventListener('mousedown', (ev) => {
       if (ev.target !== $(id) || $(id).dataset.block) return;
       CLOSERS[id]();
@@ -1268,6 +1300,7 @@
         homeLoaded = true;
         $('adminBadge').style.display = homeData.isAdmin ? 'inline-flex' : 'none';
         renderHome();
+        loadFriends();
         handleDeepLink();
       } catch (e) {
         if (token) fail(e);
@@ -1378,10 +1411,108 @@
       } catch (e) { fail(e); }
     }
 
+    // ---------- Bạn bè ----------
+    let friendsData = { friends: [], incoming: [], outgoing: [] };
+    let fpState = null;
+
+    async function loadFriends() {
+      try { friendsData = await api('/api/friends'); } catch (e) { /* lỗi mạng: giữ danh sách cũ */ }
+      renderFriends();
+    }
+
+    function renderFriends() {
+      const f = friendsData;
+      $('frCnt').textContent = f.friends.length;
+      const row = (u, act, sub) => `<div class="frow">${av(u.name)}<span class="mid"><b>${esc(u.name)}</b><small>${esc(sub || u.email)}</small></span><span class="act">${act}</span></div>`;
+      let h = '';
+      if (f.incoming.length) {
+        h += f.incoming.map((u) => row(u,
+          `<button class="btn primary sm" onclick="respondFriend('accept','${esc(u.sub)}')"><i class="fa-solid fa-check"></i> Xác nhận</button><button class="btn soft sm" onclick="respondFriend('decline','${esc(u.sub)}')">Từ chối</button>`,
+          'Muốn kết bạn')).join('');
+      }
+      h += f.friends.map((u) => row(u, `<button class="btn soft sm" onclick="removeFriend('${esc(u.sub)}')" aria-label="Huỷ kết bạn"><i class="fa-solid fa-user-minus"></i></button>`)).join('');
+      h += f.outgoing.map((u) => row(u, `<button class="btn soft sm" onclick="respondFriend('cancel','${esc(u.sub)}')">Huỷ lời mời</button>`, 'Đang chờ họ xác nhận')).join('');
+      $('friendBox').innerHTML = h || '<div class="empty card"><b>Chưa có bạn bè</b>Nhập email của người đã có tài khoản để gửi lời mời kết bạn.</div>';
+    }
+
+    async function sendFriendReq() {
+      const email = $('friendEmail').value.trim();
+      if (!email) { toast('Hãy nhập email của bạn bè', 'err'); $('friendEmail').focus(); return; }
+      showLoad(true);
+      try {
+        const r = await api('/api/friends', { method: 'POST', body: { action: 'request', email } });
+        friendsData = r;
+        $('friendEmail').value = '';
+        renderFriends();
+        toast({ sent: 'Đã gửi lời mời, chờ họ xác nhận', accepted: 'Hai bạn đã là bạn bè', already_friends: 'Hai bạn đã là bạn bè', already_sent: 'Đã gửi lời mời trước đó, đang chờ họ xác nhận' }[r.status] || 'Đã gửi');
+      } catch (e) { fail(e); }
+      finally { showLoad(false); }
+    }
+
+    async function respondFriend(action, sub) {
+      showLoad(true);
+      try {
+        friendsData = await api('/api/friends', { method: 'POST', body: { action, sub } });
+        renderFriends();
+        if (action === 'accept') toast('Đã kết bạn');
+      } catch (e) { fail(e); }
+      finally { showLoad(false); }
+    }
+
+    async function removeFriend(sub) {
+      const u = friendsData.friends.find((x) => x.sub === sub);
+      if (!u || !(await uiConfirm(`Huỷ kết bạn với ${u.name}? Các nhóm chung vẫn giữ nguyên.`, { title: 'Huỷ kết bạn', ok: 'Huỷ kết bạn', cancel: 'Giữ lại', danger: true }))) return;
+      await respondFriend('remove', sub);
+    }
+
+    // mode 'create': chọn bạn trước khi tạo nhóm mới. mode 'add': thêm vào nhóm đang mở.
+    function openFriendPick(mode, code) {
+      const inGroup = mode === 'add' ? new Set(getMeta().members.map((m) => m.sub)) : new Set();
+      fpState = { mode, code: code || currentG };
+      const list = friendsData.friends;
+      $('fpTitle').textContent = mode === 'create' ? `Tạo nhóm "${fpState.code}"` : 'Thêm bạn bè vào nhóm';
+      $('fpMsg').textContent = list.length ? 'Chọn bạn bè để thêm vào nhóm. Họ vào nhóm ngay, và có thể rời nhóm bất cứ lúc nào.' : 'Bạn chưa có bạn bè nào đã xác nhận. Kết bạn ở màn Nhóm của tôi trước.';
+      $('fpList').innerHTML = list.map((u, i) => {
+        const dis = inGroup.has(u.sub);
+        return `<label class="frow pick ${dis ? 'off' : ''}">${av(u.name)}<span class="mid"><b>${esc(u.name)}</b><small>${dis ? 'Đã trong nhóm' : esc(u.email)}</small></span><input type="checkbox" data-sub="${esc(u.sub)}" ${dis ? 'disabled' : ''}></label>`;
+      }).join('');
+      $('fpOk').style.display = list.length ? '' : 'none';
+      $('fpOk').innerHTML = mode === 'create' ? '<i class="fa-solid fa-plus"></i> Tạo nhóm và thêm bạn đã chọn' : '<i class="fa-solid fa-user-plus"></i> Thêm vào nhóm';
+      $('fpSkip').style.display = mode === 'create' ? '' : 'none';
+      openOv('friendSheet');
+    }
+
+    async function confirmFriendPick(skip) {
+      if (!fpState) return;
+      const subs = skip ? [] : [...document.querySelectorAll('#fpList input:checked')].map((x) => x.dataset.sub);
+      const st = fpState;
+      if (st.mode === 'add' && !subs.length) { toast('Hãy chọn ít nhất 1 người', 'err'); return; }
+      closeOv('friendSheet');
+      showLoad(true);
+      try {
+        if (st.mode === 'create') {
+          const r = await api('/api/groups', { method: 'POST', body: { action: 'create', code: st.code, friends: subs } });
+          $('newGroupCode').value = '';
+          closeOv('codeSheet');
+          showLoad(false);
+          const n = (r.friendResults || []).filter((x) => x.status === 'added').length;
+          toast(`Đã tạo nhóm "${r.code}"${n ? `, thêm ${n} bạn` : ''}`);
+          await openGroup(r.code);
+        } else {
+          const r = await api('/api/groups', { method: 'POST', body: { action: 'addFriends', code: st.code, subs } });
+          const n = r.results.filter((x) => x.status === 'added').length;
+          await refreshGroup();
+          toast(n ? `Đã thêm ${n} bạn vào nhóm` : 'Không thêm được ai', n ? undefined : 'err');
+        }
+      } catch (e) { fail(e); }
+      finally { showLoad(false); fpState = null; }
+    }
+
     // Nhập mã ở trang chủ: chưa có thì tạo, đã có thì cho chọn tham gia hoặc tạo mã khác.
     let codeState = null;
 
     async function createWith(code) {
+      if (friendsData.friends.length) { openFriendPick('create', code); return; }
       showLoad(true);
       try {
         const r = await api('/api/groups', { method: 'POST', body: { action: 'create', code } });
