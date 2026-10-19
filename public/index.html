@@ -506,6 +506,9 @@
     .frow.pick { cursor: pointer; }
     .frow.pick input { width: 20px; height: 20px; accent-color: var(--brand-ink); flex-shrink: 0; }
     .frow.off { opacity: .55; cursor: default; }
+    .home-tabs button .cnt { margin-left: 4px; font-size: 11px; opacity: .75; }
+    .home-tabs button { position: relative; }
+    .home-tabs .dot { position: absolute; top: 8px; right: 14px; width: 9px; height: 9px; border-radius: 50%; background: #E5484D; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
 </head>
@@ -572,27 +575,33 @@
 
       <div id="inviteBox"></div>
 
-      <div class="sh first"><span class="ic"><i class="fa-solid fa-people-group"></i></span><h2>Nhóm của tôi</h2><span class="cnt" id="grpCnt">0</span></div>
-      <div id="myGroups"></div>
-
-      <div class="sh"><span class="ic"><i class="fa-solid fa-user-group"></i></span><h2>Bạn bè</h2><span class="cnt" id="frCnt">0</span></div>
-      <div id="friendBox"></div>
-      <div class="joincard" style="margin-bottom:6px;">
-        <p>Kết bạn với người đã có tài khoản. Họ xác nhận xong thì bạn thêm họ vào nhóm chỉ bằng một chạm.</p>
-        <div class="create">
-          <input type="email" id="friendEmail" onkeyup="if(event.key === 'Enter') sendFriendReq()" class="inp" placeholder="Email của bạn bè" autocapitalize="none" autocomplete="off">
-          <button onclick="sendFriendReq()" class="btn primary"><i class="fa-solid fa-user-plus"></i> Kết bạn</button>
-        </div>
+      <div class="seg pay home-tabs" role="tablist" style="margin-bottom:14px;">
+        <button id="htGroups" class="on" role="tab" onclick="setHomeTab('groups')"><i class="fa-solid fa-people-group"></i> Nhóm <span class="cnt" id="grpCnt">0</span></button>
+        <button id="htFriends" role="tab" onclick="setHomeTab('friends')"><i class="fa-solid fa-user-group"></i> Bạn bè <span class="cnt" id="frCnt">0</span><span class="dot" id="frDot" style="display:none;"></span></button>
       </div>
 
-      <div class="sh"><span class="ic"><i class="fa-solid fa-circle-plus"></i></span><h2>Vào hoặc tạo nhóm</h2></div>
-      <div class="joincard">
-        <p>Nhập mã nhóm. Nhóm đã có thì bạn chọn tham gia, chưa có thì tạo mới và bạn là trưởng nhóm.</p>
-        <div class="create">
-          <input type="text" id="newGroupCode" onkeyup="if(event.key === 'Enter') submitCode()" class="inp" placeholder="Mã nhóm, vd: di-da-lat" autocapitalize="none" autocomplete="off">
-          <button onclick="submitCode()" class="btn primary"><i class="fa-solid fa-arrow-right"></i> Tiếp tục</button>
+      <section id="homeGroups">
+        <div id="myGroups"></div>
+        <div class="sh"><span class="ic"><i class="fa-solid fa-circle-plus"></i></span><h2>Vào hoặc tạo nhóm</h2></div>
+        <div class="joincard">
+          <p>Nhập mã nhóm. Nhóm đã có thì bạn chọn tham gia, chưa có thì tạo mới và bạn là trưởng nhóm.</p>
+          <div class="create">
+            <input type="text" id="newGroupCode" onkeyup="if(event.key === 'Enter') submitCode()" class="inp" placeholder="Mã nhóm, vd: di-da-lat" autocapitalize="none" autocomplete="off">
+            <button onclick="submitCode()" class="btn primary"><i class="fa-solid fa-arrow-right"></i> Tiếp tục</button>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <section id="homeFriends" style="display:none;">
+        <div class="joincard" style="margin-bottom:14px;">
+          <p>Kết bạn với người đã có tài khoản. Họ xác nhận xong thì bạn thêm họ vào nhóm chỉ bằng một chạm.</p>
+          <div class="create">
+            <input type="email" id="friendEmail" onkeyup="if(event.key === 'Enter') sendFriendReq()" class="inp" placeholder="Email của bạn bè" autocapitalize="none" autocomplete="off">
+            <button onclick="sendFriendReq()" class="btn primary"><i class="fa-solid fa-user-plus"></i> Kết bạn</button>
+          </div>
+        </div>
+        <div id="friendBox"></div>
+      </section>
 
       <div id="adminBox"></div>
     </div>
@@ -1420,8 +1429,18 @@
       renderFriends();
     }
 
+    function setHomeTab(t) {
+      $('homeGroups').style.display = t === 'groups' ? '' : 'none';
+      $('homeFriends').style.display = t === 'friends' ? '' : 'none';
+      $('htGroups').classList.toggle('on', t === 'groups');
+      $('htFriends').classList.toggle('on', t === 'friends');
+      $('htGroups').setAttribute('aria-selected', t === 'groups');
+      $('htFriends').setAttribute('aria-selected', t === 'friends');
+    }
+
     function renderFriends() {
       const f = friendsData;
+      $('frDot').style.display = f.incoming.length ? '' : 'none';
       $('frCnt').textContent = f.friends.length;
       const row = (u, act, sub) => `<div class="frow">${av(u.name)}<span class="mid"><b>${esc(u.name)}</b><small>${esc(sub || u.email)}</small></span><span class="act">${act}</span></div>`;
       let h = '';
