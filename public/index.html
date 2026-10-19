@@ -401,8 +401,6 @@
       .receipt .rc-grid { grid-template-columns: 1fr; gap: 14px; }
       .receipt .rc-total { font-size: 32.5px; }
       .receipt .rc-st .what b { font-size: 23.5px; }
-      #mainApp[data-tab="table"] .receipt-wrap { display: none; }
-      #mainApp[data-tab="table"] .mcol { grid-column: 1 / -1; }
       #mainApp[data-tab]:not([data-tab="exp"]) .fab { display: none !important; }
       #addInline { width: auto; }
       .fab { right: max(16px, calc(50% - var(--wmax) / 2)); }
@@ -509,6 +507,8 @@
     .home-tabs button .cnt { margin-left: 4px; font-size: 11px; opacity: .75; }
     .home-tabs button { position: relative; }
     .home-tabs .dot { position: absolute; top: 8px; right: 14px; width: 9px; height: 9px; border-radius: 50%; background: #E5484D; }
+    .fab.home { width: 56px; height: 56px; padding: 0; justify-content: center; font-size: 0; gap: 0; right: max(16px, calc(50% - var(--wmax, 728px) / 2)); bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .fab.home i { font-size: 22px; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
 </head>
@@ -581,29 +581,15 @@
       </div>
 
       <section id="homeGroups">
+        <div class="sh first"><span class="ic"><i class="fa-solid fa-people-group"></i></span><h2>Nhóm của bạn</h2></div>
         <div id="myGroups"></div>
-        <div class="sh"><span class="ic"><i class="fa-solid fa-circle-plus"></i></span><h2>Vào hoặc tạo nhóm</h2></div>
-        <div class="joincard">
-          <p>Nhập mã nhóm. Nhóm đã có thì bạn chọn tham gia, chưa có thì tạo mới và bạn là trưởng nhóm.</p>
-          <div class="create">
-            <input type="text" id="newGroupCode" onkeyup="if(event.key === 'Enter') submitCode()" class="inp" placeholder="Mã nhóm, vd: di-da-lat" autocapitalize="none" autocomplete="off">
-            <button onclick="submitCode()" class="btn primary"><i class="fa-solid fa-arrow-right"></i> Tiếp tục</button>
-          </div>
-        </div>
+        <div id="adminBox"></div>
       </section>
 
       <section id="homeFriends" style="display:none;">
-        <div class="joincard" style="margin-bottom:14px;">
-          <p>Kết bạn với người đã có tài khoản. Họ xác nhận xong thì bạn thêm họ vào nhóm chỉ bằng một chạm.</p>
-          <div class="create">
-            <input type="email" id="friendEmail" onkeyup="if(event.key === 'Enter') sendFriendReq()" class="inp" placeholder="Email của bạn bè" autocapitalize="none" autocomplete="off">
-            <button onclick="sendFriendReq()" class="btn primary"><i class="fa-solid fa-user-plus"></i> Kết bạn</button>
-          </div>
-        </div>
         <div id="friendBox"></div>
       </section>
 
-      <div id="adminBox"></div>
     </div>
   </main>
 
@@ -821,6 +807,32 @@
   </div>
 
   <!-- Lịch sử thay đổi -->
+  <button class="fab home" id="homeFab" onclick="openHomeAdd()" aria-label="Vào hoặc tạo nhóm" style="display:none;"><i class="fa-solid fa-plus"></i></button>
+
+  <div id="startSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="startTitle">Vào hoặc tạo nhóm</h3><button class="ibtn" onclick="closeOv('startSheet')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <p class="sub" style="margin:8px 0 14px;">Nhập mã nhóm. Nhóm đã có thì bạn chọn tham gia, chưa có thì tạo mới và bạn là trưởng nhóm.</p>
+      <div class="create">
+        <input type="text" id="newGroupCode" onkeyup="if(event.key === 'Enter') submitCode()" class="inp" placeholder="Mã nhóm, vd: di-da-lat" autocapitalize="none" autocomplete="off">
+        <button onclick="submitCode()" class="btn primary"><i class="fa-solid fa-arrow-right"></i> Tiếp tục</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="addFriendSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="afTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="afTitle">Kết bạn</h3><button class="ibtn" onclick="closeOv('addFriendSheet')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <p class="sub" style="margin:8px 0 14px;">Nhập email của người đã có tài khoản. Họ xác nhận xong thì bạn thêm họ vào nhóm chỉ bằng một chạm.</p>
+      <div class="create">
+        <input type="email" id="friendEmail" onkeyup="if(event.key === 'Enter') sendFriendReq()" class="inp" placeholder="Email của bạn bè" autocapitalize="none" autocomplete="off">
+        <button onclick="sendFriendReq()" class="btn primary"><i class="fa-solid fa-user-plus"></i> Kết bạn</button>
+      </div>
+    </div>
+  </div>
+
   <div id="friendSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="fpTitle">
     <div class="sheet">
       <div class="grab"></div>
@@ -1014,7 +1026,7 @@
     }
 
     // ---------- Lớp phủ dùng chung ----------
-    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet', 'imgSheet', 'codeSheet', 'qrSheet', 'logSheet', 'friendSheet'];
+    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet', 'imgSheet', 'codeSheet', 'qrSheet', 'logSheet', 'friendSheet', 'startSheet', 'addFriendSheet'];
     function syncLock() { document.body.classList.toggle('lock', OVERLAYS.some((id) => $(id).classList.contains('open'))); }
     function openOv(id, blocking) {
       const el = $(id);
@@ -1024,7 +1036,7 @@
     }
     function closeOv(id) { $(id).classList.remove('open'); syncLock(); }
     const closeSimple = (id) => () => closeOv(id);
-    const CLOSERS = { dlg: () => dlgClose(null), payModal: () => closePay(), settleModal: () => closeSettle(), joinSheet: () => closeJoin(), imgSheet: () => closeImg(), codeSheet: closeSimple('codeSheet'), qrSheet: closeSimple('qrSheet'), logSheet: closeSimple('logSheet'), friendSheet: closeSimple('friendSheet'), expSheet: () => closeExp() };
+    const CLOSERS = { dlg: () => dlgClose(null), payModal: () => closePay(), settleModal: () => closeSettle(), joinSheet: () => closeJoin(), imgSheet: () => closeImg(), codeSheet: closeSimple('codeSheet'), qrSheet: closeSimple('qrSheet'), logSheet: closeSimple('logSheet'), friendSheet: closeSimple('friendSheet'), startSheet: closeSimple('startSheet'), addFriendSheet: closeSimple('addFriendSheet'), expSheet: () => closeExp() };
     OVERLAYS.forEach((id) => $(id).addEventListener('mousedown', (ev) => {
       if (ev.target !== $(id) || $(id).dataset.block) return;
       CLOSERS[id]();
@@ -1099,6 +1111,7 @@
       $('mainApp').style.display = name === 'app' ? 'block' : 'none';
       $('userBar').style.display = (name !== 'login' && me) ? 'block' : 'none';
       document.body.dataset.screen = name;
+      $('homeFab').style.display = name === 'group' ? 'inline-flex' : 'none';
       closeMenu();
       try { window.scrollTo({ top: 0 }); } catch (_) {}
     }
@@ -1429,7 +1442,14 @@
       renderFriends();
     }
 
+    let homeTab = 'groups';
+    function openHomeAdd() {
+      if (homeTab === 'friends') { openOv('addFriendSheet'); setTimeout(() => { try { $('friendEmail').focus(); } catch (_) {} }, 60); }
+      else { openOv('startSheet'); setTimeout(() => { try { $('newGroupCode').focus(); } catch (_) {} }, 60); }
+    }
     function setHomeTab(t) {
+      homeTab = t;
+      $('homeFab').setAttribute('aria-label', t === 'friends' ? 'Kết bạn' : 'Vào hoặc tạo nhóm');
       $('homeGroups').style.display = t === 'groups' ? '' : 'none';
       $('homeFriends').style.display = t === 'friends' ? '' : 'none';
       $('htGroups').classList.toggle('on', t === 'groups');
@@ -1462,6 +1482,7 @@
         const r = await api('/api/friends', { method: 'POST', body: { action: 'request', email } });
         friendsData = r;
         $('friendEmail').value = '';
+        closeOv('addFriendSheet');
         renderFriends();
         toast({ sent: 'Đã gửi lời mời, chờ họ xác nhận', accepted: 'Hai bạn đã là bạn bè', already_friends: 'Hai bạn đã là bạn bè', already_sent: 'Đã gửi lời mời trước đó, đang chờ họ xác nhận' }[r.status] || 'Đã gửi');
       } catch (e) { fail(e); }
@@ -1551,6 +1572,7 @@
       try { r = await api('/api/groups?lookup=' + encodeURIComponent(code)); }
       catch (e) { showLoad(false); fail(e); return; }
       showLoad(false);
+      closeOv('startSheet');
       if (!r.exists) { await createWith(r.code); return; }
       if (r.alreadyMember) { toast(`Bạn đã ở trong nhóm "${r.code}"`); await openGroup(r.code); return; }
       codeState = r;
