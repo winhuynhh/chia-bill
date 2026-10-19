@@ -402,7 +402,6 @@
       .receipt .rc-total { font-size: 32.5px; }
       .receipt .rc-st .what b { font-size: 23.5px; }
       #mainApp[data-tab]:not([data-tab="exp"]) .fabtn { display: none !important; }
-      #addInline { width: auto; }
       .fabtn { right: max(16px, calc(50% - var(--wmax) / 2)); }
       #myGroups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
       #myGroups .gcard { margin-bottom: 0; }
@@ -509,6 +508,36 @@
     .home-tabs .dot { position: absolute; top: 8px; right: 14px; width: 9px; height: 9px; border-radius: 50%; background: #E5484D; }
     .fabtn.home { width: 56px; height: 56px; padding: 0; justify-content: center; font-size: 22px; gap: 0; right: max(16px, calc(50% - var(--wmax, 728px) / 2)); bottom: calc(24px + env(safe-area-inset-bottom)); }
     .fabtn.home i, .fabtn.home svg { font-size: 22px; width: 22px; height: 22px; color: var(--on-brand); }
+    /* Laptop/màn rộng: phóng to giao diện theo bề ngang thay vì để chữ nhỏ và thừa lề. Chỉ áp cho vùng nội dung và thanh trên;
+       popup, nút nổi và bản sao chụp ảnh bảng nằm ngoài nên không bị ảnh hưởng. */
+    @media (min-width: 1280px) {
+      body[data-screen="group"] #groupArea, body[data-screen="app"] #mainApp, body[data-screen="group"] #userBar, body[data-screen="app"] #userBar { zoom: 1.12; }
+      body { --wmax: min(1100px, calc(100vw / 1.12 - 60px)); }
+    }
+    @media (min-width: 1600px) {
+      body[data-screen="group"] #groupArea, body[data-screen="app"] #mainApp, body[data-screen="group"] #userBar, body[data-screen="app"] #userBar { zoom: 1.28; }
+      body { --wmax: min(1400px, calc(100vw / 1.28 - 60px)); }
+      #mainApp > .wrap { grid-template-columns: 340px minmax(0, 1fr); }
+      #expList, #balList, #memberList { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+    }
+    @media (min-width: 2000px) {
+      body[data-screen="group"] #groupArea, body[data-screen="app"] #mainApp, body[data-screen="group"] #userBar, body[data-screen="app"] #userBar { zoom: 1.45; }
+      body { --wmax: min(1500px, calc(100vw / 1.45 - 60px)); }
+    }
+    details.setgrp { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); margin-top: 6px; }
+    details.setgrp > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+    details.setgrp > summary::-webkit-details-marker { display: none; }
+    details.setgrp > summary .av { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--pos-t); color: var(--pos); font-size: 13px; flex-shrink: 0; }
+    details.setgrp > summary .mid { flex: 1; min-width: 0; }
+    details.setgrp > summary .mid b { display: block; font-size: 14.5px; }
+    details.setgrp > summary .mid small { color: var(--mute); font-size: 12px; }
+    details.setgrp .chev { color: var(--mute); transition: transform .2s; }
+    details.setgrp[open] .chev { transform: rotate(180deg); }
+    details.setgrp .setlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 10px; padding: 0 12px 12px; }
+    details.setgrp .setlist > .ex { margin: 0 !important; box-shadow: none; background: var(--bg, #f4f4f6); }
+    tr.row-sep.tgl { cursor: pointer; }
+    tr.row-sep.tgl:hover td { background: var(--soft); }
+    @media (min-width: 1000px) { #expList > details.setgrp { grid-column: 1 / -1; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
 </head>
@@ -644,7 +673,6 @@
       </div>
 
       <section id="pn-exp" class="panel on">
-        <button id="addInline" class="btn primary block" style="margin-bottom:12px;" onclick="openExp()"><i class="fa-solid fa-plus"></i> Thêm khoản chi</button>
         <div id="expList"></div>
         <div style="text-align:center;margin-top:14px;"><button class="lnk" onclick="openLog()"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử thay đổi</button></div>
       </section>
@@ -2229,7 +2257,6 @@
       $('permAdd').checked = !!st.memberCanAdd;
       $('permEdit').checked = !!st.memberCanEdit;
       $('fab').style.display = canAdd() ? 'inline-flex' : 'none';
-      $('addInline').style.display = canAdd() ? 'inline-flex' : 'none';
     }
 
     function renderDanger() {
@@ -2279,6 +2306,9 @@
         </div>`;
     }
 
+    let paidOpen = false;
+    function toggleSettle() { paidOpen = !paidOpen; render(); }
+
     function renderExpenses() {
       const { users, expenses } = localData;
       const bills = filt.type === 'settle' ? [] : expenses.filter(e => !e.settle && inFilter(e)).slice().reverse().sort((a, b) => (b.at || 0) - (a.at || 0));
@@ -2301,14 +2331,15 @@
       }).join('');
 
       if (settles.length) {
-        h += `<h2 class="sec-t">Đã settle</h2>` + settles.map(e => {
+        const sTotal = settles.reduce((a, e) => a + e.amount, 0);
+        h += `<details class="setgrp" ${paidOpen || filt.type === 'settle' ? 'open' : ''} ontoggle="paidOpen = this.open"><summary><span class="av"><i class="fa-solid fa-check"></i></span><span class="mid"><b>Đã settle</b><small>${settles.length} giao dịch, tổng ${fmt(sTotal)}đ</small></span><i class="fa-solid fa-chevron-down chev"></i></summary><div class="setlist">` + settles.map(e => {
           const det = parseSplit(e);
           const to = Object.keys(det)[0] || '';
           return `<details class="ex settle"><summary><span class="av"><i class="fa-solid fa-check"></i></span>
             <span class="mid"><b>${esc(e.payer)} đã trả ${esc(to)}</b><small>${fmtDate(e.at)}</small></span>
             <span class="amt num pos-t">${fmt(e.amount)}đ</span></summary>
             <div class="ex-body"><div class="ln"><span>${esc(e.desc)}</span></div>${editedLine(e)}${delRow(e)}</div></details>`;
-        }).join('');
+        }).join('') + '</div></details>';
       }
       $('expList').innerHTML = h;
     }
@@ -2356,8 +2387,9 @@
       }).join('');
 
       if (settles.length) {
-        bdy += `<tr class="row-sep"><td colspan="${colSpan}">Đã settle</td></tr>`;
-        bdy += settles.map(e => {
+        const sTot = settles.reduce((a, e) => a + e.amount, 0);
+        bdy += `<tr class="row-sep tgl" onclick="toggleSettle()" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleSettle(); }" aria-expanded="${paidOpen || filt.type === 'settle'}"><td colspan="${colSpan}">Đã settle: ${settles.length} giao dịch, tổng ${fmt(sTot)}đ <i class="fa-solid fa-chevron-${paidOpen || filt.type === 'settle' ? 'up' : 'down'} no-capture" style="margin-left:6px;"></i></td></tr>`;
+        if (paidOpen || filt.type === 'settle') bdy += settles.map(e => {
           const det = parseSplit(e);
           return `<tr>
             <td class="sticky-col"><i class="fa-solid fa-handshake pos-t"></i> ${esc(e.desc)}</td>

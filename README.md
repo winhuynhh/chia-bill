@@ -116,6 +116,9 @@ Khoản chi tự lấy thời điểm nhập; form có ô "Ngày chi" để ch�
 - Settle chỉ đổi được ngày (nút **Đổi ngày**); các phần khác phải xóa rồi ghi lại.
 - **Danh bạ nhận tiền**: mỗi lần bạn nhập tài khoản nhận tiền cho một thành viên, app lưu vào hồ sơ của bạn (`profile.contacts`). Khi thêm thành viên trùng tên ở nhóm khác, app hỏi có dùng thông tin đã lưu không; trong form nhận tiền cũng có ô chọn từ danh bạ.
 
+## Settle thu gọn
+Mục "Đã settle" ở tab Khoản chi và tab Bảng mặc định thu gọn, chỉ hiện số giao dịch và tổng tiền; bấm để mở rộng. Khi lọc "Chỉ settle up" thì tự mở.
+
 ## Settle thủ công
 Trong cửa sổ Settle up: nút **Trả cách khác** trên từng gợi ý (hoặc khung "Chuyển khác gợi ý? Ghi nhận thủ công") cho chọn người chuyển, người nhận, số tiền và ngày. Ghi nhận xong là một giao dịch settle bình thường, số dư và các gợi ý còn lại tự tính lại. Người chuyển và người nhận phải khác nhau (server kiểm tra).
 
