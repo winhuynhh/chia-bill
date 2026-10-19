@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import {
   requireUser, isAdmin, canManage, groupSettings, activeLinked, isInvolved, normCode, isEmail, cs, unCs, appUrl, profilePay,
 } from './_lib.js';
+import { areFriends } from './friends.js';
 import { sendInviteMail, mailConfigured, inviteText } from './_mail.js';
 
 // Keys:
@@ -87,6 +88,25 @@ function addMember(g, user, profile, asName) {
   if (pay) g.payInfo[name] = pay;
   g.members = g.members || {};
   g.members[user.sub] = { email: user.email, name, role: g.members[user.sub]?.role || 'member', joinedAt: Date.now() };
+}
+
+
+// Thêm bạn bè đã xác nhận vào nhóm (bỏ qua người không phải bạn hoặc đã trong nhóm). Trả về danh sách kết quả.
+async function addFriendsTo(g, code, user, subs) {
+  const out = [];
+  const list = [...new Set((Array.isArray(subs) ? subs : []).map(String))].slice(0, 30);
+  for (const sub of list) {
+    if (g.members?.[sub]) { out.push({ sub, status: 'already_member' }); continue; }
+    if (!(await areFriends(user.sub, sub))) { out.push({ sub, status: 'not_friend' }); continue; }
+    const p = await kv.get(`profile:${sub}`);
+    if (!p?.email) { out.push({ sub, status: 'not_found' }); continue; }
+    addMember(g, { sub, email: p.email, name: p.name }, p);
+    const em = String(p.email).toLowerCase();
+    if (g.invites?.[em]) { delete g.invites[em]; await kv.srem(ikey(em), cs(code)); }
+    await kv.sadd(ukey(sub), cs(code));
+    out.push({ sub, status: 'added', name: g.members[sub].name });
+  }
+  return out;
 }
 
 // Đưa một thành viên ra khỏi nhóm. Chưa dính giao dịch nào: xóa luôn tên và thông tin. Đã có giao dịch: chỉ rời, giữ lại tên để quyết toán.
@@ -216,7 +236,12 @@ export default async function handler(req, res) {
       if (!ok) return bad(res, 'Mã nhóm đã tồn tại, hãy chọn mã khác', 409);
       await kv.sadd(INDEX, cs(code));
       await kv.sadd(ukey(user.sub), cs(code));
-      return res.status(200).json({ success: true, code });
+      let friendResults = [];
+      if (Array.isArray(body.friends) && body.friends.length) {
+        friendResults = await addFriendsTo(g, code, user, body.friends);
+        await kv.set(gkey(code), g);
+      }
+      return res.status(200).json({ success: true, code, friendResults });
     }
 
     const rawCode = String(body.code || '').trim();
@@ -323,6 +348,13 @@ export default async function handler(req, res) {
         mailConfigured: mailConfigured(),
         shareText: inviteText({ code, link, inviterName, inviterEmail: user.email, to: 'đã được mời' }),
       });
+    }
+
+    if (action === 'addFriends') {
+      if (!canManage(g, user)) return bad(res, 'Chỉ trưởng nhóm mới thêm được thành viên', 403);
+      const results = await addFriendsTo(g, code, user, body.subs);
+      await kv.set(key, g);
+      return res.status(200).json({ success: true, code, results });
     }
 
     if (action === 'cancelInvite') {

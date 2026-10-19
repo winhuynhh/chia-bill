@@ -37,6 +37,7 @@ export default async function handler(req, res) {
     const old = (await kv.get(key)) || {};
     const profile = { ...old, ...user, picture: info.picture || old.picture || '' };
     await kv.set(key, profile);
+    if (user.email) await kv.set(`emailidx:${String(user.email).toLowerCase()}`, user.sub);
 
     const token = signSession(user);
     return res.status(200).json({ token, user, profile });
