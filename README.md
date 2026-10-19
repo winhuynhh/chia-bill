@@ -118,3 +118,11 @@ Khoản chi tự lấy thời điểm nhập; form có ô "Ngày chi" để ch�
 
 ## Settle thủ công
 Trong cửa sổ Settle up: nút **Trả cách khác** trên từng gợi ý (hoặc khung "Chuyển khác gợi ý? Ghi nhận thủ công") cho chọn người chuyển, người nhận, số tiền và ngày. Ghi nhận xong là một giao dịch settle bình thường, số dư và các gợi ý còn lại tự tính lại. Người chuyển và người nhận phải khác nhau (server kiểm tra).
+
+## Kết bạn
+- Ở màn **Nhóm của tôi** có mục **Bạn bè**: nhập email của người đã có tài khoản để gửi lời mời. Bên kia phải **Xác nhận** thì hai người mới thành bạn (hai chiều). Có thể từ chối, huỷ lời mời đã gửi, hoặc huỷ kết bạn (các nhóm chung vẫn giữ).
+- Nếu hai người cùng gửi lời mời cho nhau thì tự thành bạn.
+- Khi tạo nhóm mới, nếu đã có bạn bè thì hiện bảng chọn để thêm ngay. Trong nhóm, trưởng nhóm bấm **Chọn từ bạn bè** để thêm tiếp. Server kiểm tra lại quan hệ bạn bè nên không thêm được người chưa xác nhận.
+- Bạn bè vào nhóm ngay, không cần đồng ý lần nữa; họ rời nhóm được bất cứ lúc nào. Người chưa có tài khoản vẫn mời bằng email hoặc link như cũ.
+- Chỉ bạn trực tiếp mới thêm được, không có "bạn của bạn".
+- Dữ liệu KV mới: `friends:<sub>`, `freqin:<sub>`, `freqout:<sub>`, `emailidx:<email>`. API: `GET/POST /api/friends`; `create` nhận thêm `friends`, thêm action `addFriends`.
