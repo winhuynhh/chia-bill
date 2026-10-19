@@ -239,9 +239,9 @@
     .jopt:has(input:checked) { border-color: var(--brand); background: #FFFAFD; }
     .jopt input { accent-color: var(--brand); width:18px; height:18px; flex:none; }
     .jopt span { min-width:0; }
-    .fab { position: fixed; right: max(16px, calc(50% - 364px)); bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 45; height: 56px; padding: 0 22px 0 18px; border-radius: 999px; background: var(--brand); color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 24px rgba(176,18,95,.4); transition: transform .12s, background .15s; }
-    .fab:hover { background: var(--brand-d); }
-    .fab:active { transform: scale(.96); }
+    .fabtn { position: fixed; right: max(16px, calc(50% - 364px)); bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 45; height: 56px; padding: 0 22px 0 18px; border-radius: 999px; background: var(--brand); color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 24px rgba(176,18,95,.4); transition: transform .12s, background .15s; }
+    .fabtn:hover { background: var(--brand-d); }
+    .fabtn:active { transform: scale(.96); }
 
     /* Danh sách khoản chi */
     details.ex { background: #fff; border-radius: var(--r-md); box-shadow: var(--shadow); margin-bottom: 8px; }
@@ -381,7 +381,7 @@
     .logtag.add { background: #E6F6EC; color: var(--pos); } .logtag.edit { background: #FFF4DC; color: #8A5A00; } .logtag.delete { background: #FDE8EA; color: var(--neg); } .logtag.restore { background: #E8EEFF; color: var(--info); }
 
     /* Trình duyệt di động có thanh công cụ nổi ở đáy: nâng nút lên để không bị che. */
-    @media (hover: none) and (pointer: coarse) { .fab { bottom: calc(max(20px, env(safe-area-inset-bottom)) + 72px); } #toast { bottom: calc(160px + env(safe-area-inset-bottom)); } #mainApp { padding-bottom: 170px; } }
+    @media (hover: none) and (pointer: coarse) { .fabtn { bottom: calc(max(20px, env(safe-area-inset-bottom)) + 72px); } #toast { bottom: calc(160px + env(safe-area-inset-bottom)); } #mainApp { padding-bottom: 170px; } }
     @media (max-width: 380px) { .rc-total { font-size: 21.5px; } .rc-st .what b { font-size: 17.5px; } #areaEqual { grid-template-columns: 1fr; } }
     @media (min-width: 1000px) {
       body { --wmax: 1120px; }
@@ -401,9 +401,9 @@
       .receipt .rc-grid { grid-template-columns: 1fr; gap: 14px; }
       .receipt .rc-total { font-size: 32.5px; }
       .receipt .rc-st .what b { font-size: 23.5px; }
-      #mainApp[data-tab]:not([data-tab="exp"]) .fab { display: none !important; }
+      #mainApp[data-tab]:not([data-tab="exp"]) .fabtn { display: none !important; }
       #addInline { width: auto; }
-      .fab { right: max(16px, calc(50% - var(--wmax) / 2)); }
+      .fabtn { right: max(16px, calc(50% - var(--wmax) / 2)); }
       #myGroups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
       #myGroups .gcard { margin-bottom: 0; }
       #myGroups .empty { grid-column: 1 / -1; }
@@ -444,8 +444,8 @@
     .seg:not(.pay) button.on { background: var(--brand); color: var(--on-brand); box-shadow: none; }
     .jopt:has(input:checked), .tcard.me { border-color: var(--brand-d); background: #F8FDEB; }
     .sw input:checked + .track { background: #7DCB1D; }
-    .fab { background: var(--brand); color: var(--on-brand); box-shadow: 0 10px 24px rgba(100,160,20,.35); }
-    .fab:hover { background: var(--brand-d); }
+    .fabtn { background: var(--brand); color: var(--on-brand); box-shadow: 0 10px 24px rgba(100,160,20,.35); }
+    .fabtn:hover { background: var(--brand-d); }
     #loading { background: rgba(184,242,76,.25); }
     .card, details.ex, .bal, .gcard, .flt, .cap, details.adm { border-radius: 22px; }
     details.ex, .bal { border-radius: 18px; }
@@ -484,14 +484,14 @@
       .tabs .seg { background: var(--dark); padding: 6px; border-radius: 30px; box-shadow: 0 14px 34px rgba(17,18,20,.35); gap: 2px; }
       .tabs .seg button { color: #A9ACB3; min-height: 50px; border-radius: 24px; }
       .tabs .seg button.on { background: var(--brand); color: var(--on-brand); }
-      .fab { right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); width: 56px; height: 56px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
-      .fab i, .fab svg { font-size: 20px; }
+      .fabtn { right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); width: 56px; height: 56px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
+      .fabtn i, .fabtn svg { font-size: 20px; }
       #toast { bottom: calc(168px + env(safe-area-inset-bottom)); }
     }
     @media (min-width: 1000px) {
       .tabs .seg { background: #fff; box-shadow: var(--shadow); }
       .tabs .seg button.on { background: var(--brand); color: var(--on-brand); }
-      .fab { right: max(16px, calc(50% - var(--wmax) / 2)); }
+      .fabtn { right: max(16px, calc(50% - var(--wmax) / 2)); }
     }
     details.manual { margin-top: 14px; background: var(--soft); border-radius: 18px; padding: 12px 14px; }
     details.manual > summary { cursor: pointer; font-weight: 700; font-size: 13px; list-style: none; display: flex; align-items: center; gap: 8px; }
@@ -507,8 +507,8 @@
     .home-tabs button .cnt { margin-left: 4px; font-size: 11px; opacity: .75; }
     .home-tabs button { position: relative; }
     .home-tabs .dot { position: absolute; top: 8px; right: 14px; width: 9px; height: 9px; border-radius: 50%; background: #E5484D; }
-    .fab.home { width: 56px; height: 56px; padding: 0; justify-content: center; font-size: 22px; gap: 0; right: max(16px, calc(50% - var(--wmax, 728px) / 2)); bottom: calc(24px + env(safe-area-inset-bottom)); }
-    .fab.home i, .fab.home svg { font-size: 22px; width: 22px; height: 22px; color: var(--on-brand); }
+    .fabtn.home { width: 56px; height: 56px; padding: 0; justify-content: center; font-size: 22px; gap: 0; right: max(16px, calc(50% - var(--wmax, 728px) / 2)); bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .fabtn.home i, .fabtn.home svg { font-size: 22px; width: 22px; height: 22px; color: var(--on-brand); }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
 </head>
@@ -726,7 +726,7 @@
       </div>
     </div>
 
-    <button class="fab" id="fab" onclick="openExp()"><i class="fa-solid fa-plus"></i> Thêm khoản chi</button>
+    <button class="fabtn" id="fab" onclick="openExp()"><i class="fa-solid fa-plus"></i> Thêm khoản chi</button>
   </main>
 
   <!-- Thêm khoản chi -->
@@ -807,7 +807,7 @@
   </div>
 
   <!-- Lịch sử thay đổi -->
-  <button class="fab home" id="homeFab" onclick="openHomeAdd()" aria-label="Vào hoặc tạo nhóm" style="display:none;"><i class="fa-solid fa-plus"></i></button>
+  <button class="fabtn home" id="homeFab" onclick="openHomeAdd()" aria-label="Vào hoặc tạo nhóm" style="display:none;"><i class="fa-solid fa-plus"></i></button>
 
   <div id="startSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="startTitle">
     <div class="sheet">
