@@ -774,7 +774,7 @@
           </div>
         </div>
         <div>
-          <label class="field"><span>Số tiền (đ)</span><input type="text" id="expAmount" class="inp big num" inputmode="decimal" placeholder="150000 hoặc 150k" oninput="onAmtInput()" autocomplete="off"></label>
+          <label class="field"><span>Số tiền (đ)</span><input type="text" id="expAmount" class="inp big num" inputmode="text" placeholder="150000, 150k hoặc 24*5" oninput="onAmtInput()" autocomplete="off"></label>
           <div id="amtPreview" class="amt-prev"></div>
         </div>
         <label class="field"><span>Ai trả?</span><select id="expPayer" class="sel"></select></label>
@@ -1867,7 +1867,8 @@
 
     // ---------- Thêm khoản chi ----------
     // Nhận "150000", "150.000", "150k", "1.2tr", "1,5tr".
-    function parseAmount(raw) {
+    // Số tiền: "150000", "150.000", "150k", "1.2tr". Có thể nhập phép tính: "24*5", "(120+30)/3", "2tr-500k".
+    function parseSingleAmount(raw) {
       const s = String(raw ?? '').trim().toLowerCase().replace(/\s+/g, '');
       const m = s.match(/^(\d+(?:[.,]\d+)*)(k|nghìn|nghin|tr|triệu|trieu|m)?$/);
       if (!m) return 0;
@@ -1876,6 +1877,37 @@
         return Math.round((parseFloat(m[1].replace(',', '.')) || 0) * mult);
       }
       return Math.round(Number(m[1].replace(/[.,]/g, ''))) || 0;
+    }
+    function evalAmountExpr(raw) {
+      const src = String(raw ?? '').toLowerCase().replace(/\s+/g, '').replace(/[×*]/g, '*').replace(/[÷:]/g, '/');
+      const re = /(\d+(?:[.,]\d+)*(?:k|nghìn|nghin|tr|triệu|trieu|m)?)|([+\-*\/x()])/gy;
+      const toks = [];
+      let m, last = 0;
+      while ((m = re.exec(src))) { toks.push(m[1] ? { n: m[1] } : { o: m[2] === 'x' ? '*' : m[2] }); last = re.lastIndex; }
+      if (last !== src.length || !toks.length) return NaN;
+      const num = (t) => /^\d+[.,]\d{1,2}$/.test(t) ? parseFloat(t.replace(',', '.')) : parseSingleAmount(t);
+      let i = 0;
+      const peek = () => toks[i];
+      const factor = () => {
+        const t = toks[i++];
+        if (!t) return NaN;
+        if (t.n) return num(t.n);
+        if (t.o === '-') return -factor();
+        if (t.o === '(') { const v = expr(); if (!toks[i] || toks[i].o !== ')') return NaN; i++; return v; }
+        return NaN;
+      };
+      const term = () => { let v = factor(); while (peek() && (peek().o === '*' || peek().o === '/')) { const op = toks[i++].o; const r = factor(); v = op === '*' ? v * r : v / r; } return v; };
+      const expr = () => { let v = term(); while (peek() && (peek().o === '+' || peek().o === '-')) { const op = toks[i++].o; const r = term(); v = op === '+' ? v + r : v - r; } return v; };
+      const v = expr();
+      return i === toks.length && isFinite(v) ? v : NaN;
+    }
+    function parseAmount(raw) {
+      const s = String(raw ?? '');
+      if (/[+*\/×÷()x:]/i.test(s) || s.trim().indexOf('-') > 0) {
+        const v = evalAmountExpr(s);
+        return isNaN(v) || v <= 0 || v > 1e12 ? 0 : Math.round(v);
+      }
+      return parseSingleAmount(s);
     }
 
     const splitMode = () => document.querySelector('input[name="splitMode"]:checked').value;
@@ -1962,7 +1994,7 @@
     function onAmtInput() {
       const a = parseAmount($('expAmount').value);
       const raw = $('expAmount').value.trim();
-      $('amtPreview').textContent = a > 0 ? `= ${fmt(a)}đ` : (raw ? 'Nhập số, ví dụ 150000 hoặc 150k' : '');
+      $('amtPreview').textContent = a > 0 ? `= ${fmt(a)}đ` : (raw ? 'Nhập số hoặc phép tính, ví dụ 150k hoặc 24*5' : '');
       recalcExact();
       updateSplitHint();
     }
@@ -2638,7 +2670,7 @@
           <label class="field" style="flex:1;min-width:0;"><span>Người chuyển</span><select id="mFrom" class="sel">${opts(manualPre.from)}</select></label>
           <label class="field" style="flex:1;min-width:0;"><span>Người nhận</span><select id="mTo" class="sel"><option value="">Chọn...</option>${opts(manualPre.to)}</select></label>
         </div>
-        <label class="field"><span>Số tiền (đ)</span><input type="text" id="mAmt" class="inp" inputmode="decimal" autocomplete="off" placeholder="150000 hoặc 150k" value="${manualPre.amount ? esc(String(manualPre.amount)) : ''}"></label>
+        <label class="field"><span>Số tiền (đ)</span><input type="text" id="mAmt" class="inp" inputmode="text" autocomplete="off" placeholder="150000, 150k hoặc 24*5" value="${manualPre.amount ? esc(String(manualPre.amount)) : ''}"></label>
         <button class="btn primary block" style="margin-top:10px;" onclick="manualPay()"><i class="fa-solid fa-check"></i> Ghi nhận đã chuyển</button>
       </details>`;
     }
