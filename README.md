@@ -129,3 +129,7 @@ Trong cửa sổ Settle up: nút **Trả cách khác** trên từng gợi ý (ho
 - Bạn bè vào nhóm ngay, không cần đồng ý lần nữa; họ rời nhóm được bất cứ lúc nào. Người chưa có tài khoản vẫn mời bằng email hoặc link như cũ.
 - Chỉ bạn trực tiếp mới thêm được, không có "bạn của bạn".
 - Dữ liệu KV mới: `friends:<sub>`, `freqin:<sub>`, `freqout:<sub>`, `emailidx:<email>`. API: `GET/POST /api/friends`; `create` nhận thêm `friends`, thêm action `addFriends`.
+
+## Nhập phép tính, thứ tự nhóm
+- Ô số tiền (thêm khoản chi, ghi nhận thủ công) nhận phép tính: `24*5`, `24x5`, `(120+30)/3`, `2tr-500k`, `150k*2+50k`. Bên dưới ô hiện kết quả `= ...đ` trước khi lưu. Dùng + - * / và dấu ngoặc; phép tính sai thì không lưu được.
+- Danh sách "Nhóm của bạn" xếp theo thời gian tạo, mới nhất trước. Nhóm cũ chưa có ngày tạo nằm cuối.
