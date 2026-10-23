@@ -33,6 +33,7 @@ const summary = (g, user, code) => ({
   legacy: !g.members,
   role: g.members?.[user.sub]?.role || (isAdmin(user.email) ? 'admin' : 'member'),
   ownerEmail: g.ownerEmail || '',
+  createdAt: g.createdAt || 0,
   memberCount: Object.keys(g.members || {}).length,
   billCount: (g.expenses || []).filter((e) => !e.settle).length,
 });
@@ -179,9 +180,11 @@ export default async function handler(req, res) {
       const groups = [];
       const staleGroups = [];
       for (const { code, g } of await loadMany(myCodes)) {
-        if (g && g.members?.[user.sub]) groups.push(summary(g, user));
+        if (g && g.members?.[user.sub]) groups.push(summary(g, user, code));
         else staleGroups.push(cs(code));
       }
+      // Mới tạo lên trước; nhóm cũ chưa có ngày tạo xếp cuối theo mã.
+      groups.sort((a, b) => (b.createdAt - a.createdAt) || a.code.localeCompare(b.code));
       if (staleGroups.length) await kv.srem(ukey(user.sub), ...staleGroups);
 
       const inviteCodes = (await kv.smembers(ikey(email))).map(unCs);
