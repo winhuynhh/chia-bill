@@ -83,11 +83,60 @@ export const groupSettings = (g) => ({
   memberCanEdit: g?.settings?.memberCanEdit === true,
   joinByCode: g?.settings?.joinByCode !== false,
 });
+// Nhóm đã khoá sau quyết toán: thành viên không thêm/sửa/xóa khoản chi được nữa (vẫn ghi nhận settle). Chỉ trưởng nhóm khoá và mở.
 export function perms(g, user) {
   const manage = canManage(g, user);
   const member = !!g?.members?.[user.sub];
   const s = groupSettings(g);
-  return { canAdd: manage || (member && s.memberCanAdd), canEdit: manage || (member && s.memberCanEdit) };
+  const locked = !!g?.locked;
+  return {
+    canAdd: manage || (member && s.memberCanAdd && !locked),
+    canEdit: manage || (member && s.memberCanEdit && !locked),
+    canAddBase: manage || (member && s.memberCanAdd), // không tính khoá, dùng cho thông tin nhận tiền
+    locked,
+  };
+}
+
+// Số dư từng người: dương là còn nợ, âm là sẽ nhận (cùng công thức với màn Số dư).
+export function balancesOf(g) {
+  const users = Array.isArray(g?.users) ? g.users : [];
+  const d = Object.fromEntries(users.map((u) => [u, 0]));
+  let bills = 0;
+  for (const e of g?.expenses || []) {
+    let det = {};
+    try { det = JSON.parse(e.splitDetails || '{}') || {}; } catch { det = {}; }
+    if (e.settle) {
+      if (e.payer in d) d[e.payer] -= Number(e.amount) || 0;
+      for (const u in det) if (u in d) d[u] += Number(det[u]) || 0;
+    } else {
+      bills++;
+      if (e.payer in d) d[e.payer] -= Number(e.amount) || 0;
+      for (const u in det) if (u in d) d[u] += Number(det[u]) || 0;
+    }
+  }
+  return { d, bills };
+}
+
+// Gợi ý ít giao dịch nhất để cả nhóm hết nợ.
+export function transfersOf(g) {
+  const { d } = balancesOf(g);
+  const debtors = [], creditors = [];
+  for (const u in d) {
+    const v = Math.round(d[u]);
+    if (v > 0) debtors.push({ u, v }); else if (v < 0) creditors.push({ u, v: -v });
+  }
+  debtors.sort((a, b) => b.v - a.v);
+  creditors.sort((a, b) => b.v - a.v);
+  const out = [];
+  let i = 0, j = 0;
+  while (i < debtors.length && j < creditors.length) {
+    const x = Math.min(debtors[i].v, creditors[j].v);
+    if (x > 0) out.push({ from: debtors[i].u, to: creditors[j].u, amount: x });
+    debtors[i].v -= x; creditors[j].v -= x;
+    if (debtors[i].v === 0) i++;
+    if (creditors[j].v === 0) j++;
+  }
+  return out;
 }
 
 // Tên đang gắn với thành viên còn trong nhóm (người đã rời thì tên được xem là trống).
@@ -120,7 +169,10 @@ export function groupView(g, user) {
       role: myRole,
       canManage: manage,
       settings: groupSettings(g),
-      ...perms(g, user),
+      ...(({ canAdd, canEdit }) => ({ canAdd, canEdit }))(perms(g, user)),
+      locked: !!g.locked,
+      lockedAt: g.lockedAt || 0,
+      lockedBy: g.lockedBy || '',
       isAdmin: admin,
       ownerEmail: g.ownerEmail || '',
       left: Object.values(g.left || {}).map((x) => x.name),

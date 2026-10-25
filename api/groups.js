@@ -1,9 +1,10 @@
 import { kv } from '@vercel/kv';
 import crypto from 'node:crypto';
 import {
-  requireUser, isAdmin, canManage, groupSettings, activeLinked, isInvolved, normCode, isEmail, cs, unCs, appUrl, profilePay,
+  requireUser, isAdmin, canManage, groupSettings, activeLinked, isInvolved, normCode, isEmail, cs, unCs, appUrl, profilePay, balancesOf,
 } from './_lib.js';
 import { areFriends } from './friends.js';
+import { notify } from './_notify.js';
 import { sendInviteMail, mailConfigured, inviteText } from './_mail.js';
 
 // Keys:
@@ -28,7 +29,18 @@ const INDEX = 'groups:index';
 
 const bad = (res, msg, status = 400) => res.status(status).json({ error: msg });
 
+// Tình trạng tất toán của nhóm: cùng cách tính với màn Số dư (chi trừ phần phải chịu, cộng settle đã chuyển/nhận).
+function debtOf(g, user) {
+  const { d, bills } = balancesOf(g);
+  let pending = 0, debtors = 0;
+  for (const u of Object.keys(d)) { const v = Math.round(d[u]); if (v > 0) { pending += v; debtors++; } }
+  const me = g.links?.[user.sub];
+  const mine = me && me in d ? Math.round(d[me]) : null;
+  return { bills, settled: bills > 0 && pending === 0, pending, debtors, mine, locked: !!g.locked };
+}
+
 const summary = (g, user, code) => ({
+  debt: debtOf(g, user),
   code: code || g.code,
   legacy: !g.members,
   role: g.members?.[user.sub]?.role || (isAdmin(user.email) ? 'admin' : 'member'),
@@ -358,6 +370,27 @@ export default async function handler(req, res) {
       const results = await addFriendsTo(g, code, user, body.subs);
       await kv.set(key, g);
       return res.status(200).json({ success: true, code, results });
+    }
+
+    // Khoá nhóm sau quyết toán: thành viên không thêm/sửa/xóa khoản chi được nữa. Chỉ trưởng nhóm (hoặc admin) khoá và mở.
+    if (action === 'setLock') {
+      if (!canManage(g, user)) return bad(res, 'Chỉ trưởng nhóm mới khoá hoặc mở khoá nhóm', 403);
+      const want = body.locked === true;
+      if (!!g.locked !== want) {
+        g.locked = want;
+        g.lockedAt = want ? Date.now() : 0;
+        g.lockedBy = want ? (g.members?.[user.sub]?.name || user.name || user.email) : '';
+        g.log = g.log || [];
+        g.log.push({ t: Date.now(), by: g.members?.[user.sub]?.name || user.name || user.email, byEmail: user.email, act: want ? 'lock' : 'unlock', desc: '', amount: 0, settle: false });
+        if (g.log.length > 300) g.log.splice(0, g.log.length - 300);
+        await kv.set(key, g);
+        const who = g.members?.[user.sub]?.name || user.name || user.email;
+        await notify(Object.keys(g.members || {}).filter((s) => s !== user.sub), {
+          type: want ? 'lock' : 'unlock', code,
+          text: want ? `${who} đã khoá nhóm "${code}" sau quyết toán. Thành viên không thêm khoản chi mới được nữa.` : `${who} đã mở khoá nhóm "${code}". Thành viên lại thêm được khoản chi.`,
+        });
+      }
+      return res.status(200).json({ success: true, code, locked: !!g.locked });
     }
 
     if (action === 'cancelInvite') {

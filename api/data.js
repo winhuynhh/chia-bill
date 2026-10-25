@@ -1,6 +1,8 @@
 import { kv } from '@vercel/kv';
 import crypto from 'node:crypto';
-import { requireUser, isAdmin, sanitizePay, profilePay, normCode, canAccess, groupView, perms, activeLinked, isInvolved } from './_lib.js';
+import { requireUser, isAdmin, sanitizePay, profilePay, normCode, canAccess, groupView, perms, activeLinked, isInvolved, canManage, transfersOf, appUrl } from './_lib.js';
+import { notify } from './_notify.js';
+import { sendReminderMail, mailConfigured } from './_mail.js';
 
 // Dữ liệu nhóm nằm ở key group:<code> (tạo/mời/đổi mã xem api/groups.js).
 // Ở đây chỉ đọc và ghi dữ liệu chia tiền, và chỉ thành viên đã tham gia (hoặc admin) mới truy cập được.
@@ -102,9 +104,16 @@ export default async function handler(req, res) {
     g.payInfo = g.payInfo || {};
     g.links = g.links || {};
 
+    const lockedMsg = 'Nhóm đã khoá sau quyết toán. Chỉ trưởng nhóm mới thêm hoặc sửa được, hoặc mở khoá nhóm.';
+    const deny = (def) => bad(res, pm.locked && !canManage(g, user) ? lockedMsg : def, 403);
+    const actorName = g.members?.[user.sub]?.name || user.name || user.email;
+    const others = () => Object.keys(g.members || {}).filter((s) => s !== user.sub);
+    let after = null;   // việc phụ chạy sau khi đã lưu (thông báo)
+    let extra = {};
+
     switch (body.action) {
       case 'addUser': {
-        if (!pm.canAdd) return bad(res, 'Trưởng nhóm chưa cho phép thành viên thêm người', 403);
+        if (!pm.canAdd) return deny('Trưởng nhóm chưa cho phép thành viên thêm người');
         const name = String(body.userName || '').trim().slice(0, 40);
         if (!name) return bad(res, 'Thiếu tên thành viên');
         if (!g.users.includes(name)) g.users.push(name);
@@ -113,7 +122,7 @@ export default async function handler(req, res) {
 
       case 'addExpense': {
         const settle = body.settle === true;
-        if (!settle && !pm.canAdd) return bad(res, 'Trưởng nhóm chưa cho phép thành viên thêm khoản chi', 403);
+        if (!settle && !pm.canAdd) return deny('Trưởng nhóm chưa cho phép thành viên thêm khoản chi');
         const v = validateExpense(g, body, settle);
         if (v.error) return bad(res, v.error);
         const pa = parseAt(body.at);
@@ -128,22 +137,46 @@ export default async function handler(req, res) {
           at: pa.at || Date.now(),
         });
         addLog(g, user, body.restore === true ? 'restore' : 'add', { desc: v.desc, amount: v.amount, settle }, '');
+        if (body.restore !== true) {
+          const to = Object.keys(v.split)[0];
+          const text = settle
+            ? `${v.payer} đã chuyển ${money(v.amount)} cho ${to} (nhóm ${g.code})`
+            : `${actorName} thêm khoản "${v.desc}" ${money(v.amount)}, ${v.payer} trả (nhóm ${g.code})`;
+          after = () => notify(others(), { type: settle ? 'settle' : 'expense', code: g.code, text });
+        }
         break;
       }
 
       case 'editExpense': {
-        if (!pm.canEdit) return bad(res, 'Trưởng nhóm chưa cho phép thành viên sửa giao dịch', 403);
+        if (!pm.canEdit) return deny('Trưởng nhóm chưa cho phép thành viên sửa giao dịch');
         const e = g.expenses.find((x) => x.id === body.id);
         if (!e) return bad(res, 'Không tìm thấy giao dịch', 404);
         const pa = parseAt(body.at);
         if (pa.error) return bad(res, pa.error);
-        // Giao dịch settle chỉ đổi được ngày.
+        // Giao dịch settle: sửa được người chuyển, người nhận, số tiền và ngày. Chỉ gửi ngày thì chỉ đổi ngày.
         if (e.settle) {
-          if (!pa.at) return bad(res, 'Chọn ngày chuyển tiền mới');
-          const was = e.at;
-          e.at = pa.at;
-          e.editedBy = user.email; e.editedAt = Date.now();
-          addLog(g, user, 'edit', e, `Ngày ${was ? dmy(was) : '?'} → ${dmy(e.at)}`);
+          const full = body.payer !== undefined || body.splitDetails !== undefined;
+          if (!full) {
+            if (!pa.at) return bad(res, 'Chọn ngày chuyển tiền mới');
+            const was = e.at;
+            e.at = pa.at;
+            e.editedBy = user.email; e.editedAt = Date.now();
+            addLog(g, user, 'edit', e, `Ngày ${was ? dmy(was) : '?'} → ${dmy(e.at)}`);
+            break;
+          }
+          const v = validateExpense(g, { ...body, desc: body.desc || e.desc || 'Settle' }, true);
+          if (v.error) return bad(res, v.error);
+          const toOld = Object.keys(JSON.parse(e.splitDetails || '{}'))[0] || '';
+          const toNew = Object.keys(v.split)[0];
+          v.split = { [toNew]: v.amount };
+          const notes = [];
+          if (e.payer !== v.payer) notes.push(`Người chuyển ${e.payer} → ${v.payer}`);
+          if (toOld !== toNew) notes.push(`Người nhận ${toOld || '?'} → ${toNew}`);
+          if (e.amount !== v.amount) notes.push(`Số tiền ${money(e.amount)} → ${money(v.amount)}`);
+          if (pa.at && dmy(pa.at) !== dmy(e.at || 0)) notes.push(`Ngày ${e.at ? dmy(e.at) : '?'} → ${dmy(pa.at)}`);
+          if (pa.at) e.at = pa.at;
+          Object.assign(e, { desc: `Settle: ${v.payer} → ${toNew}`, amount: v.amount, payer: v.payer, splitDetails: JSON.stringify(v.split), editedBy: user.email, editedAt: Date.now() });
+          addLog(g, user, 'edit', e, notes.join('; ') || 'Lưu lại, không đổi gì');
           break;
         }
         const v = validateExpense(g, body, false);
@@ -161,7 +194,7 @@ export default async function handler(req, res) {
       }
 
       case 'deleteExpense': {
-        if (!pm.canEdit) return bad(res, 'Trưởng nhóm chưa cho phép thành viên xóa giao dịch', 403);
+        if (!pm.canEdit) return deny('Trưởng nhóm chưa cho phép thành viên xóa giao dịch');
         const idx = g.expenses.findIndex((e) => e.id === body.id);
         if (idx !== -1) {
           const [gone] = g.expenses.splice(idx, 1);
@@ -172,7 +205,7 @@ export default async function handler(req, res) {
 
       // Xóa một người khỏi danh sách chia tiền: chỉ khi chưa dính giao dịch nào và không còn là thành viên đang ở trong nhóm.
       case 'removeUser': {
-        if (!pm.canEdit) return bad(res, 'Trưởng nhóm chưa cho phép thành viên xóa người', 403);
+        if (!pm.canEdit) return deny('Trưởng nhóm chưa cho phép thành viên xóa người');
         const name = String(body.userName || '');
         if (!g.users.includes(name)) return bad(res, 'Thành viên không tồn tại');
         if (activeLinked(g).has(name)) return bad(res, 'Người này đang là thành viên của nhóm. Họ cần rời nhóm trước.');
@@ -186,7 +219,7 @@ export default async function handler(req, res) {
       }
 
       case 'setPayInfo': {
-        if (!pm.canAdd) return bad(res, 'Trưởng nhóm chưa cho phép thành viên sửa thông tin này', 403);
+        if (!pm.canAddBase) return bad(res, 'Trưởng nhóm chưa cho phép thành viên sửa thông tin này', 403);
         const member = String(body.memberName || '');
         if (!g.users.includes(member)) return bad(res, 'Thành viên không tồn tại');
         if (!body.pay) {
@@ -240,12 +273,44 @@ export default async function handler(req, res) {
         break;
       }
 
+      // Nhắc settle: gửi thông báo vào tài khoản và email cho người còn nợ. Mỗi người chỉ nhắc lại sau 3 giờ.
+      case 'remind': {
+        if (!g.members?.[user.sub] && !canManage(g, user)) return bad(res, 'Chỉ thành viên nhóm mới nhắc được', 403);
+        const who = String(body.from || '');
+        const list = transfersOf(g).filter((t) => !who || t.from === who);
+        if (!list.length) return bad(res, who ? `${who} không còn khoản nào cần chuyển` : 'Cả nhóm đã cân bằng, không cần nhắc');
+        g.remindAt = g.remindAt || {};
+        const link = `${appUrl(req)}/?g=${encodeURIComponent(g.code)}`;
+        const res2 = { notified: 0, emailed: 0, cooldown: 0, noAccount: 0, mailConfigured: mailConfigured(), mailError: '' };
+        const jobs = [];
+        for (const t of list) {
+          const sub = Object.entries(g.links).find(([sb, n]) => n === t.from && g.members?.[sb])?.[0];
+          if (!sub || sub === user.sub) { if (!sub) res2.noAccount++; continue; }
+          if (Date.now() - (g.remindAt[t.from] || 0) < 3 * 3600000) { res2.cooldown++; continue; }
+          g.remindAt[t.from] = Date.now();
+          const pi = g.payInfo[t.to];
+          const payTxt = pi ? (pi.method === 'bank' ? ` (${pi.bankName} ${pi.bankAccount})` : ` (MoMo ${pi.phone})`) : '';
+          const text = `${actorName} nhắc bạn chuyển ${money(t.amount)} cho ${t.to}${payTxt} để settle nhóm ${g.code}.`;
+          const email = g.members[sub].email;
+          jobs.push((async () => {
+            await notify([sub], { type: 'remind', code: g.code, text });
+            res2.notified++;
+            const m = await sendReminderMail({ to: email, code: g.code, text, link });
+            if (m.sent) res2.emailed++; else if (!res2.mailError) res2.mailError = m.reason || '';
+          })());
+        }
+        await Promise.all(jobs);
+        extra = { remind: res2 };
+        break;
+      }
+
       default:
         return bad(res, 'Action không hợp lệ');
     }
 
     await kv.set(key, g);
-    return res.status(200).json({ success: true, data: groupView(g, user) });
+    if (after) { try { await after(); } catch (e) { console.error('after', e); } }
+    return res.status(200).json({ success: true, data: groupView(g, user), ...extra });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: err.message || 'Internal server error' });

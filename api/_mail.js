@@ -51,3 +51,23 @@ export async function sendInviteMail({ to, code, link, inviterName, inviterEmail
     return { sent: false, reason: e.message || 'Gửi email thất bại' };
   }
 }
+
+export async function sendReminderMail({ to, code, text, link }) {
+  if (!mailConfigured()) return { sent: false, reason: 'Chưa cấu hình SMTP_USER / SMTP_PASS trên Vercel' };
+  try {
+    await getTransporter().sendMail({
+      from: process.env.MAIL_FROM || `Billing Master <${process.env.SMTP_USER}>`,
+      to,
+      subject: `[Billing Master] Nhắc settle nhóm "${code}"`,
+      text: `${text}\n\nMở nhóm: ${link}`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#3c4043">
+        <h2 style="margin:0 0 12px">Nhắc settle nhóm ${esc(code)}</h2>
+        <p style="font-size:15px">${esc(text)}</p>
+        <p><a href="${esc(link)}" style="display:inline-block;background:#111214;color:#B8F24C;padding:10px 22px;border-radius:24px;text-decoration:none;font-weight:bold">Mở nhóm để settle</a></p>
+      </div>`,
+    });
+    return { sent: true };
+  } catch (e) {
+    return { sent: false, reason: e.message || 'Gửi email thất bại' };
+  }
+}
