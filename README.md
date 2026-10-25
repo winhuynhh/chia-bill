@@ -133,3 +133,14 @@ Trong cửa sổ Settle up: nút **Trả cách khác** trên từng gợi ý (ho
 ## Nhập phép tính, thứ tự nhóm
 - Ô số tiền (thêm khoản chi, ghi nhận thủ công) nhận phép tính: `24*5`, `24x5`, `(120+30)/3`, `2tr-500k`, `150k*2+50k`. Bên dưới ô hiện kết quả `= ...đ` trước khi lưu. Dùng + - * / và dấu ngoặc; phép tính sai thì không lưu được.
 - Danh sách "Nhóm của bạn" xếp theo thời gian tạo, mới nhất trước. Nhóm cũ chưa có ngày tạo nằm cuối.
+
+## Tình trạng tất toán, sửa settle
+- Mỗi nhóm trong "Nhóm của bạn" có nhãn: **Đã tất toán** (mọi người đã cân bằng), **Bạn còn nợ X đ**, **Bạn được nhận X đ**, hoặc **Chưa tất toán, còn X đ** (bạn không nợ nhưng nhóm vẫn còn nợ nhau). Bảng Quản trị có thêm cột Tất toán cho mọi nhóm. Nhóm chưa có khoản chi thì không hiện nhãn.
+- Sửa giao dịch settle: đổi được người chuyển, người nhận, số tiền (nhập được phép tính) và ngày. Lịch sử thay đổi ghi lại từng thay đổi.
+
+## Thông báo, nhắc settle, khoá nhóm, tab Cài đặt (v3.17.0)
+
+- **Thông báo trong app**: biểu tượng chuông ở thanh trên. Mỗi khi có người thêm khoản chi hoặc settle, mọi thành viên khác (trừ người thao tác) nhận thông báo. Lưu ở `notif:<sub>` (tối đa 60), tự làm mới mỗi 60 giây, không có push. Hoàn tác (restore) không gửi thông báo.
+- **Nhắc settle**: trong popup Settle up có nút "Nhắc <tên>" cho từng khoản và nút "Nhắc mọi người còn nợ". Mỗi người nợ nhận thông báo trong app và email (cần cấu hình SMTP). Mỗi người nhận tối đa 1 lần nhắc / 3 giờ. Người chưa có tài khoản app chỉ được đếm, không nhận được nhắc. Email dẫn tới `/?g=<mã nhóm>`.
+- **Khoá nhóm sau quyết toán**: chỉ trưởng nhóm bật/tắt (tab Cài đặt hoặc banner ở tab Khoản chi). Khi khoá, thành viên không thêm, sửa, xóa khoản chi hay thêm người. Vẫn ghi nhận settle và cập nhật thông tin chuyển khoản. Trưởng nhóm luôn thao tác được. Có ghi vào lịch sử và thông báo cho thành viên.
+- **Tab Cài đặt** (mới): khoá nhóm, quyền thành viên, xóa nhóm. Tab **Thành viên** chỉ còn danh sách thành viên, lời mời, bạn bè thêm vào nhóm.
