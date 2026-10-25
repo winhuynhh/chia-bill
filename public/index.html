@@ -242,6 +242,7 @@
     .fabtn { position: fixed; right: max(16px, calc(50% - 364px)); bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 45; height: 56px; padding: 0 22px 0 18px; border-radius: 999px; background: var(--brand); color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 24px rgba(176,18,95,.4); transition: transform .12s, background .15s; }
     .fabtn:hover { background: var(--brand-d); }
     .fabtn:active { transform: scale(.96); }
+    #mainApp[data-tab]:not([data-tab="exp"]) .fabtn:not(.home) { display: none !important; }
 
     /* Danh sách khoản chi */
     details.ex { background: #fff; border-radius: var(--r-md); box-shadow: var(--shadow); margin-bottom: 8px; }
@@ -538,6 +539,24 @@
     tr.row-sep.tgl { cursor: pointer; }
     tr.row-sep.tgl:hover td { background: var(--soft); }
     @media (min-width: 1000px) { #expList > details.setgrp { grid-column: 1 / -1; } }
+    .dbt-row { display: block; margin-top: 6px; }
+    .badge.dbt { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .badge.dbt.ok { background: var(--pos-t); color: var(--pos); }
+    .badge.dbt.owe { background: #FDE8E8; color: #B42318; }
+    .badge.dbt.get { background: #E4F3FF; color: #0B5CAD; }
+    .badge.dbt.wait { background: #FFF1D6; color: #8A5A00; }
+    .menu-wrap { display: flex; align-items: center; gap: 4px; }
+    .bell-btn { position: relative; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; color: var(--ink); }
+    .bell-btn:hover { background: var(--soft); }
+    .bell-dot { position: absolute; top: 3px; right: 2px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #E5484D; color: #fff; font-size: 10.5px; font-weight: 800; display: grid; place-items: center; }
+    .nrow { display: flex; gap: 12px; padding: 12px; border-radius: 14px; background: #fff; border: 1px solid var(--line); margin-bottom: 8px; cursor: pointer; text-align: left; width: 100%; }
+    .nrow.unread { background: #F5FCE6; border-color: rgba(100,160,20,.35); }
+    .nrow .ni { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); flex-shrink: 0; font-size: 14px; }
+    .nrow .nt { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.4; }
+    .nrow .nt small { display: block; color: var(--mute); font-size: 11.5px; margin-top: 3px; }
+    .lock-banner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #FFF1D6; color: #8A5A00; border: 1px solid #F3D9A4; border-radius: 14px; padding: 10px 14px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+    .lock-banner .btn { margin-left: auto; }
+    .logtag.lock, .logtag.unlock { background: #FFF1D6; color: #8A5A00; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
   </style>
 </head>
@@ -551,6 +570,7 @@
     <div class="wrap">
       <button class="brand" onclick="goHome()" aria-label="Về danh sách nhóm"><i class="fa-solid fa-receipt"></i> Billing Master</button>
       <div class="menu-wrap">
+        <button class="bell-btn" id="bellBtn" onclick="openNotifs()" aria-label="Thông báo"><i class="fa-regular fa-bell"></i><span class="bell-dot" id="bellDot" style="display:none;"></span></button>
         <button class="me-btn" onclick="toggleMenu(event)" aria-haspopup="true" aria-label="Tài khoản">
           <img id="userAvatar" alt="" referrerpolicy="no-referrer" style="display:none;">
           <span id="userInit" class="av" style="display:none;"></span>
@@ -641,6 +661,7 @@
           <button id="tb-bal" onclick="setTab('bal')" role="tab"><i class="fa-solid fa-scale-balanced"></i>Số dư</button>
           <button id="tb-table" onclick="setTab('table')" role="tab"><i class="fa-solid fa-table"></i>Bảng</button>
           <button id="tb-people" onclick="setTab('people')" role="tab"><i class="fa-solid fa-user-group"></i>Thành viên</button>
+          <button id="tb-settings" onclick="setTab('settings')" role="tab"><i class="fa-solid fa-gear"></i>Cài đặt</button>
         </div>
       </div>
 
@@ -673,6 +694,7 @@
       </div>
 
       <section id="pn-exp" class="panel on">
+        <div id="lockBanner" class="lock-banner" style="display:none;"></div>
         <div id="expList"></div>
         <div style="text-align:center;margin-top:14px;"><button class="lnk" onclick="openLog()"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử thay đổi</button></div>
       </section>
@@ -741,6 +763,10 @@
           </div>
         </div>
 
+      </section>
+
+      <section id="pn-settings" class="panel">
+        <div class="card" id="lockCard"></div>
         <div class="card" id="permCard" style="display:none;">
           <div class="card-h">Quyền của thành viên</div>
           <p class="card-s">Trưởng nhóm luôn thêm, sửa, xóa được. Hai công tắc này áp dụng cho các thành viên còn lại.</p>
@@ -751,6 +777,7 @@
 
         <div class="card danger-zone" id="dangerZone"></div>
       </section>
+
       </div>
     </div>
 
@@ -836,6 +863,29 @@
 
   <!-- Lịch sử thay đổi -->
   <button class="fabtn home" id="homeFab" onclick="openHomeAdd()" aria-label="Vào hoặc tạo nhóm" style="display:none;"><i class="fa-solid fa-plus"></i></button>
+
+  <div id="notifSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="ntTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="ntTitle">Thông báo</h3><button class="ibtn" onclick="closeOv('notifSheet')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <div style="display:flex;gap:8px;margin:10px 0;"><button class="btn soft sm" onclick="markAllRead()"><i class="fa-solid fa-check-double"></i> Đánh dấu đã đọc</button><button class="btn soft sm" onclick="clearNotifsAll()"><i class="fa-regular fa-trash-can"></i> Xóa hết</button></div>
+      <div id="notifBody"></div>
+    </div>
+  </div>
+
+  <div id="settleEditSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="seTitle">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-h"><h3 id="seTitle">Sửa giao dịch settle</h3><button class="ibtn" onclick="closeOv('settleEditSheet')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="stack" style="margin-top:12px;">
+        <label class="field"><span>Người chuyển</span><select id="seFrom" class="sel"></select></label>
+        <label class="field"><span>Người nhận</span><select id="seTo" class="sel"></select></label>
+        <label class="field"><span>Số tiền (đ)</span><input type="text" id="seAmt" class="inp" inputmode="text" autocomplete="off" placeholder="150000, 150k hoặc 24*5" oninput="seHint()"><small id="seAmtHint" class="hint"></small></label>
+        <label class="field"><span>Ngày chuyển tiền</span><input type="date" id="seDate" class="inp"></label>
+      </div>
+      <button class="btn primary block" style="margin-top:14px;" onclick="saveEditSettle()"><i class="fa-solid fa-check"></i> Lưu thay đổi</button>
+    </div>
+  </div>
 
   <div id="startSheet" class="ov" role="dialog" aria-modal="true" aria-labelledby="startTitle">
     <div class="sheet">
@@ -1054,7 +1104,7 @@
     }
 
     // ---------- Lớp phủ dùng chung ----------
-    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet', 'imgSheet', 'codeSheet', 'qrSheet', 'logSheet', 'friendSheet', 'startSheet', 'addFriendSheet'];
+    const OVERLAYS = ['dlg', 'payModal', 'settleModal', 'expSheet', 'joinSheet', 'imgSheet', 'codeSheet', 'qrSheet', 'logSheet', 'friendSheet', 'startSheet', 'addFriendSheet', 'settleEditSheet', 'notifSheet'];
     function syncLock() { document.body.classList.toggle('lock', OVERLAYS.some((id) => $(id).classList.contains('open'))); }
     function openOv(id, blocking) {
       const el = $(id);
@@ -1064,7 +1114,7 @@
     }
     function closeOv(id) { $(id).classList.remove('open'); syncLock(); }
     const closeSimple = (id) => () => closeOv(id);
-    const CLOSERS = { dlg: () => dlgClose(null), payModal: () => closePay(), settleModal: () => closeSettle(), joinSheet: () => closeJoin(), imgSheet: () => closeImg(), codeSheet: closeSimple('codeSheet'), qrSheet: closeSimple('qrSheet'), logSheet: closeSimple('logSheet'), friendSheet: closeSimple('friendSheet'), startSheet: closeSimple('startSheet'), addFriendSheet: closeSimple('addFriendSheet'), expSheet: () => closeExp() };
+    const CLOSERS = { dlg: () => dlgClose(null), payModal: () => closePay(), settleModal: () => closeSettle(), joinSheet: () => closeJoin(), imgSheet: () => closeImg(), codeSheet: closeSimple('codeSheet'), qrSheet: closeSimple('qrSheet'), logSheet: closeSimple('logSheet'), friendSheet: closeSimple('friendSheet'), startSheet: closeSimple('startSheet'), settleEditSheet: closeSimple('settleEditSheet'), notifSheet: closeSimple('notifSheet'), addFriendSheet: closeSimple('addFriendSheet'), expSheet: () => closeExp() };
     OVERLAYS.forEach((id) => $(id).addEventListener('mousedown', (ev) => {
       if (ev.target !== $(id) || $(id).dataset.block) return;
       CLOSERS[id]();
@@ -1351,10 +1401,21 @@
         $('adminBadge').style.display = homeData.isAdmin ? 'inline-flex' : 'none';
         renderHome();
         loadFriends();
+        loadNotifs();
         handleDeepLink();
       } catch (e) {
         if (token) fail(e);
       } finally { showLoad(false); }
+    }
+
+    // Tình trạng tất toán của nhóm, tính từ số dư của mọi thành viên.
+    function debtBadge(g, withDetail) {
+      const d = g.debt;
+      if (!d || !d.bills) return '';
+      if (d.settled) return '<span class="badge xong dbt ok"><i class="fa-solid fa-circle-check"></i> Đã tất toán</span>';
+      if (d.mine > 0) return `<span class="badge dbt owe"><i class="fa-solid fa-arrow-up"></i> Bạn còn nợ ${fmt(d.mine)}đ</span>`;
+      if (d.mine < 0) return `<span class="badge dbt get"><i class="fa-solid fa-arrow-down"></i> Bạn được nhận ${fmt(-d.mine)}đ</span>`;
+      return `<span class="badge dbt wait">${withDetail ? `Chưa tất toán, ${d.debtors} người còn nợ ${fmt(d.pending)}đ` : `Chưa tất toán, còn ${fmt(d.pending)}đ`}</span>`;
     }
 
     function renderHome() {
@@ -1371,18 +1432,20 @@
       $('myGroups').innerHTML = h.groups.length ? h.groups.map((g, i) => `<button class="gcard" onclick="openGroupAt(${i})">
           ${av(g.code, 'sq')}
           <span class="mid"><b><span class="n">${esc(g.code)}</span>${g.role === 'owner' ? '<span class="badge nhan">Trưởng nhóm</span>' : ''}</b>
-            <small>${g.memberCount} thành viên, ${g.billCount} khoản chi</small></span>
+            <small>${g.memberCount} thành viên, ${g.billCount} khoản chi</small>
+            ${debtBadge(g) ? `<span class="dbt-row">${debtBadge(g)}</span>` : ''}</span>
           <i class="fa-solid fa-chevron-right"></i></button>`).join('')
         : `<div class="empty card"><b>Chưa có nhóm nào</b>Tạo nhóm đầu tiên bên dưới, hoặc nhờ trưởng nhóm mời bạn qua email.</div>`;
 
       $('adminBox').innerHTML = (h.isAdmin && h.all) ? `<div class="sh adm div"><span class="ic"><i class="fa-solid fa-user-shield"></i></span><h2>Quản trị</h2><span class="cnt">${h.all.length} nhóm</span></div><details class="adm" open>
         <summary>Tất cả nhóm trong hệ thống <i class="fa-solid fa-chevron-down" style="margin-left:auto;font-size:12px;"></i></summary>
         <div class="tw">${h.all.length ? `<table class="atable">
-          <thead><tr><th>Mã nhóm</th><th>Trưởng nhóm</th><th>TV</th><th>Khoản chi</th><th></th></tr></thead>
+          <thead><tr><th>Mã nhóm</th><th>Trưởng nhóm</th><th>TV</th><th>Khoản chi</th><th>Tất toán</th><th></th></tr></thead>
           <tbody>${h.all.map((g, i) => `<tr>
             <td><b>${esc(g.code)}</b></td>
             <td class="hint">${g.legacy ? 'Nhóm cũ, chưa có thành viên' : esc(g.ownerEmail)}</td>
             <td>${g.memberCount}</td><td>${g.billCount}</td>
+            <td>${g.debt && g.debt.bills ? (g.debt.settled ? '<span class="badge xong dbt ok"><i class="fa-solid fa-circle-check"></i> Đã tất toán</span>' : `<span class="badge dbt wait">${g.debt.debtors} người nợ, ${fmt(g.debt.pending)}đ</span>`) : '<span class="hint">Chưa có khoản chi</span>'}</td>
             <td><div class="acts">
               <button class="btn soft sm" onclick="openGroupAdmin(${i})">Mở</button>
               <button class="btn soft sm" onclick="adminRename(${i})">Đổi mã</button>
@@ -1459,6 +1522,90 @@
         const r = await api('/api/groups', { method: 'POST', body: { action: 'resetJoinLink', code: currentG } });
         copyText(r.link);
       } catch (e) { fail(e); }
+    }
+
+    // ---------- Thông báo ----------
+    let notifs = { items: [], unread: 0 };
+    async function loadNotifs() {
+      if (!token || !me) return;
+      try { notifs = await api('/api/notifications'); } catch (_) { return; }
+      const n = notifs.unread || 0;
+      $('bellDot').style.display = n ? 'grid' : 'none';
+      $('bellDot').textContent = n > 9 ? '9+' : String(n);
+      if ($('notifSheet').classList.contains('open')) renderNotifs();
+    }
+    const NICON = { expense: 'fa-receipt', settle: 'fa-handshake', remind: 'fa-bell', lock: 'fa-lock', unlock: 'fa-lock-open' };
+    function timeAgo(t) {
+      const m = Math.floor((Date.now() - t) / 60000);
+      if (m < 1) return 'Vừa xong';
+      if (m < 60) return m + ' phút trước';
+      const h = Math.floor(m / 60);
+      return h < 24 ? h + ' giờ trước' : fmtDT(t);
+    }
+    function renderNotifs() {
+      const it = notifs.items || [];
+      $('notifBody').innerHTML = it.length ? it.map((n, i) => `<button class="nrow ${n.read ? '' : 'unread'}" onclick="openNotif(${i})">
+          <span class="ni"><i class="fa-solid ${NICON[n.type] || 'fa-circle-info'}"></i></span>
+          <span class="nt">${esc(n.text)}<small>${timeAgo(n.at)}</small></span></button>`).join('')
+        : '<div class="empty"><b>Chưa có thông báo</b>Khi có người thêm khoản chi, settle hoặc nhắc bạn chuyển tiền, bạn sẽ thấy ở đây.</div>';
+    }
+    async function openNotifs() {
+      renderNotifs();
+      openOv('notifSheet');
+      await loadNotifs();
+    }
+    async function openNotif(i) {
+      const n = (notifs.items || [])[i];
+      if (!n) return;
+      closeOv('notifSheet');
+      if (!n.read) { try { await api('/api/notifications', { method: 'POST', body: { action: 'read', ids: [n.id] } }); } catch (_) {} loadNotifs(); }
+      if (n.code) { if (currentG === n.code) { setTab(n.type === 'remind' ? 'bal' : 'exp'); refreshGroup(); } else openGroup(n.code); }
+    }
+    async function markAllRead() {
+      try { notifs = await api('/api/notifications', { method: 'POST', body: { action: 'read', ids: 'all' } }); } catch (e) { fail(e); return; }
+      loadNotifs(); renderNotifs();
+    }
+    async function clearNotifsAll() {
+      try { notifs = await api('/api/notifications', { method: 'POST', body: { action: 'clear' } }); } catch (e) { fail(e); return; }
+      loadNotifs(); renderNotifs();
+    }
+    setInterval(() => { if (!document.hidden) loadNotifs(); }, 60000);
+
+    // ---------- Khoá nhóm ----------
+    async function toggleLock() {
+      const m = getMeta();
+      if (!m.canManage) return;
+      const want = !m.locked;
+      if (want) {
+        const open = computeTransfers().length;
+        const msg = open ? `Nhóm còn ${open} giao dịch chưa settle. Khoá bây giờ thì thành viên vẫn ghi nhận được settle nhưng không thêm khoản chi mới. Khoá nhóm?` : 'Thành viên sẽ không thêm, sửa, xóa khoản chi được nữa. Chỉ bạn mở khoá được. Khoá nhóm?';
+        if (!(await uiConfirm(msg, { title: 'Khoá nhóm sau quyết toán', ok: 'Khoá nhóm', cancel: 'Chưa' }))) return;
+      } else if (!(await uiConfirm('Mở khoá để thành viên lại thêm khoản chi như quyền đã cài?', { title: 'Mở khoá nhóm', ok: 'Mở khoá', cancel: 'Giữ khoá' }))) return;
+      showLoad(true);
+      try {
+        await api('/api/groups', { method: 'POST', body: { action: 'setLock', code: currentG, locked: want } });
+        await refreshGroup();
+        toast(want ? 'Đã khoá nhóm' : 'Đã mở khoá nhóm');
+      } catch (e) { fail(e); }
+      finally { showLoad(false); }
+    }
+
+    // ---------- Nhắc settle ----------
+    async function remind(from) {
+      if (busy) return;
+      busy = true; showLoad(true);
+      try {
+        const r = await api('/api/data', { method: 'POST', body: { groupId: currentG, action: 'remind', from: from || '' } });
+        localData = normData(r.data); render();
+        const x = r.remind || {};
+        const parts = [];
+        if (x.notified) parts.push(`Đã nhắc ${x.notified} người trong app${x.emailed ? `, ${x.emailed} email` : ''}`);
+        if (x.notified && !x.emailed) parts.push(x.mailConfigured ? 'email chưa gửi được' : 'server chưa cấu hình email');
+        if (x.cooldown) parts.push(`${x.cooldown} người vừa được nhắc, chờ 3 giờ để nhắc lại`);
+        if (x.noAccount) parts.push(`${x.noAccount} người chưa có tài khoản app nên chưa nhắc được`);
+        toast(parts.join('. ') || 'Không có ai để nhắc', x.notified ? undefined : 'err');
+      } catch (e) { fail(e); }
+      finally { busy = false; showLoad(false); }
     }
 
     // ---------- Bạn bè ----------
@@ -1698,6 +1845,7 @@
 
     function openApp(keepTab) {
       showScreen('app');
+      loadNotifs();
       $('displayGroupId').textContent = currentG.toUpperCase();
       setTab(keepTab ? curTab : 'exp');
     }
@@ -1714,7 +1862,8 @@
       exp: ['fa-receipt', 'Khoản chi', 'Mọi khoản chi của nhóm, ai trả và chia cho ai'],
       bal: ['fa-scale-balanced', 'Số dư', 'Ai đang nợ, ai sẽ nhận lại bao nhiêu'],
       table: ['fa-table', 'Bảng chia tiền', 'Mỗi người đóng bao nhiêu cho từng khoản'],
-      people: ['fa-user-group', 'Thành viên', 'Người trong nhóm, quyền hạn và cách nhận tiền']
+      people: ['fa-user-group', 'Thành viên', 'Người trong nhóm, lời mời và cách nhận tiền'],
+      settings: ['fa-gear', 'Cài đặt nhóm', 'Quyền của thành viên, khoá nhóm sau quyết toán']
     };
     function setTab(name) {
       curTab = name;
@@ -1725,7 +1874,7 @@
       $('phTitle').textContent = h[1];
       $('phDesc').textContent = h[2];
       $('fltBar').style.display = (name === 'exp' || name === 'table') ? 'block' : 'none';
-      ['exp', 'bal', 'table', 'people'].forEach((t) => {
+      ['exp', 'bal', 'table', 'people', 'settings'].forEach((t) => {
         $('pn-' + t).classList.toggle('on', t === name);
         $('tb-' + t).classList.toggle('on', t === name);
         $('tb-' + t).setAttribute('aria-selected', t === name ? 'true' : 'false');
@@ -2083,6 +2232,39 @@
     const nameOfEmail = (em) => { const m = (getMeta().members || []).find(x => String(x.email || '').toLowerCase() === String(em || '').toLowerCase()); return m ? m.name : (em || ''); };
 
     // Đổi ngày cho giao dịch settle (settle không sửa được phần khác).
+    let seId = null;
+    function seHint() {
+      const a = parseAmount($('seAmt').value), raw = $('seAmt').value.trim();
+      $('seAmtHint').textContent = a > 0 ? `= ${fmt(a)}đ` : (raw ? 'Nhập số hoặc phép tính, ví dụ 150k hoặc 24*5' : '');
+    }
+    function openEditSettle(id) {
+      const e = localData.expenses.find(x => x.id === id);
+      if (!e || !e.settle) return;
+      if (!canEdit()) { toast('Trưởng nhóm chưa cho phép thành viên sửa giao dịch', 'err'); return; }
+      seId = id;
+      const to = Object.keys(parseSplit(e))[0] || '';
+      const opts = (sel) => localData.users.map(u => `<option value="${esc(u)}" ${u === sel ? 'selected' : ''}>${esc(u)}</option>`).join('');
+      $('seFrom').innerHTML = opts(e.payer);
+      $('seTo').innerHTML = opts(to);
+      $('seAmt').value = String(e.amount);
+      $('seDate').value = ymd(e.at || Date.now());
+      $('seDate').max = ymd(Date.now());
+      seHint();
+      openOv('settleEditSheet');
+    }
+    async function saveEditSettle() {
+      const e = localData.expenses.find(x => x.id === seId);
+      if (!e) { closeOv('settleEditSheet'); return; }
+      const from = $('seFrom').value, to = $('seTo').value, amount = parseAmount($('seAmt').value), v = $('seDate').value;
+      if (!from || !to) { toast('Chọn người chuyển và người nhận', 'err'); return; }
+      if (from === to) { toast('Người chuyển và người nhận phải khác nhau', 'err'); return; }
+      if (!(amount > 0)) { toast('Nhập số tiền, ví dụ 150000 hoặc 150k', 'err'); return; }
+      const body = { action: 'editExpense', id: seId, desc: `Settle: ${from} → ${to}`, amount, payer: from, splitDetails: JSON.stringify({ [to]: amount }) };
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v) && v !== ymd(e.at || Date.now())) { const [y, m, d] = v.split('-').map(Number); body.at = new Date(y, m - 1, d, 12, 0, 0).getTime(); }
+      closeOv('settleEditSheet');
+      if (await mutate(body)) toast('Đã lưu giao dịch settle');
+    }
+
     async function editSettleDate(id) {
       const e = localData.expenses.find(x => x.id === id);
       if (!e || !e.settle) return;
@@ -2095,8 +2277,8 @@
 
     function openLog() {
       const log = localData.log || [];
-      const TAG = { add: 'Thêm', edit: 'Sửa', delete: 'Xóa', restore: 'Hoàn tác' };
-      $('logBody').innerHTML = log.length ? log.map(l => `<div class="logrow">
+      const TAG = { add: 'Thêm', edit: 'Sửa', delete: 'Xóa', restore: 'Hoàn tác', lock: 'Khoá nhóm', unlock: 'Mở khoá' };
+      $('logBody').innerHTML = log.length ? log.map(l => (l.act === 'lock' || l.act === 'unlock') ? `<div class="logrow"><span class="logtag ${esc(l.act)}">${TAG[l.act]}</span><small>${esc(l.by)}, ${fmtDT(l.t)}</small></div>` : `<div class="logrow">
           <span class="logtag ${esc(l.act)}">${TAG[l.act] || esc(l.act)}</span><b>${l.settle && !/^settle/i.test(l.desc) ? 'Settle: ' : ''}${esc(l.desc)}</b> <span class="num">${fmt(l.amount)}đ</span>
           <small>${esc(l.by)}, ${fmtDT(l.t)}${l.note ? ' &middot; ' + esc(l.note) : ''}</small></div>`).join('')
         : '<div class="empty"><b>Chưa có thay đổi nào được ghi</b>Từ giờ mọi thao tác thêm, sửa, xóa sẽ hiện ở đây.</div>';
@@ -2284,11 +2466,19 @@
     function renderPerms() {
       const m = getMeta();
       $('permCard').style.display = m.canManage ? 'block' : 'none';
+      if (m.locked && !m.canManage) { /* thành viên: banner hiển thị trạng thái */ }
       const st = m.settings || { memberCanAdd: true, memberCanEdit: false, joinByCode: true };
       $('permCode').checked = st.joinByCode !== false;
       $('permAdd').checked = !!st.memberCanAdd;
       $('permEdit').checked = !!st.memberCanEdit;
       $('fab').style.display = canAdd() ? 'inline-flex' : 'none';
+      const lk = !!m.locked;
+      $('lockCard').innerHTML = `<div class="card-h">Khoá nhóm sau quyết toán</div>
+        <p class="card-s">${lk ? `Nhóm đang khoá${m.lockedBy ? ' bởi ' + esc(m.lockedBy) : ''}. Thành viên không thêm, sửa hoặc xóa khoản chi được, vẫn ghi nhận settle bình thường.` : 'Sau khi mọi người quyết toán xong, khoá nhóm để thành viên không thêm khoản chi mới. Chỉ trưởng nhóm khoá và mở khoá được.'}</p>
+        ${m.canManage ? `<button class="btn ${lk ? 'soft' : 'primary'}" onclick="toggleLock()"><i class="fa-solid fa-${lk ? 'lock-open' : 'lock'}"></i> ${lk ? 'Mở khoá nhóm' : 'Khoá nhóm'}</button>` : `<span class="badge ${lk ? 'dong' : 'xong'}"><i class="fa-solid fa-${lk ? 'lock' : 'lock-open'}"></i> ${lk ? 'Đang khoá' : 'Đang mở'}</span>`}`;
+      const lb = $('lockBanner');
+      lb.style.display = lk ? 'flex' : 'none';
+      lb.innerHTML = lk ? `<i class="fa-solid fa-lock"></i> Nhóm đã khoá sau quyết toán${m.canManage ? '' : ', chỉ trưởng nhóm thêm khoản chi được'}.${m.canManage ? '<button class="btn soft sm" onclick="toggleLock()">Mở khoá</button>' : ''}` : '';
     }
 
     function renderDanger() {
@@ -2345,7 +2535,7 @@
       const { users, expenses } = localData;
       const bills = filt.type === 'settle' ? [] : expenses.filter(e => !e.settle && inFilter(e)).slice().reverse().sort((a, b) => (b.at || 0) - (a.at || 0));
       const settles = filt.type === 'bill' ? [] : expenses.filter(e => e.settle && inFilter(e)).slice().reverse();
-      const delRow = (e) => !canEdit() ? '' : `<div class="foot" style="gap:18px;">${e.settle ? `<button class="lnk" onclick="editSettleDate('${esc(e.id)}')"><i class="fa-regular fa-calendar"></i> Đổi ngày</button>` : `<button class="lnk" onclick="openEdit('${esc(e.id)}')"><i class="fa-regular fa-pen-to-square"></i> Sửa</button>`}<button class="lnk neg" onclick="deleteExpense('${esc(e.id)}')"><i class="fa-regular fa-trash-can"></i> Xóa</button></div>`;
+      const delRow = (e) => !canEdit() ? '' : `<div class="foot" style="gap:18px;">${e.settle ? `<button class="lnk" onclick="openEditSettle('${esc(e.id)}')"><i class="fa-regular fa-pen-to-square"></i> Sửa</button>` : `<button class="lnk" onclick="openEdit('${esc(e.id)}')"><i class="fa-regular fa-pen-to-square"></i> Sửa</button>`}<button class="lnk neg" onclick="deleteExpense('${esc(e.id)}')"><i class="fa-regular fa-trash-can"></i> Xóa</button></div>`;
 
       let h = '';
       if (!bills.length && !settles.length && expenses.length) {
@@ -2405,7 +2595,7 @@
       const bills = filt.type === 'settle' ? [] : expenses.filter(e => !e.settle && inFilter(e));
       const settles = filt.type === 'bill' ? [] : expenses.filter(e => e.settle && inFilter(e));
       const allSettles = filt.type !== 'bill' && expenses.some(e => e.settle);
-      const delBtn = (e) => `<td class="no-capture">${canEdit() ? `${e.settle ? '' : `<button onclick="openEdit('${esc(e.id)}')" class="ibtn" aria-label="Sửa khoản chi"><i class="fa-regular fa-pen-to-square"></i></button>`}<button onclick="deleteExpense('${esc(e.id)}')" class="ibtn del" aria-label="Xóa khoản chi"><i class="fa-regular fa-trash-can"></i></button>` : ''}</td>`;
+      const delBtn = (e) => `<td class="no-capture">${canEdit() ? `${e.settle ? `<button onclick="openEditSettle('${esc(e.id)}')" class="ibtn" aria-label="Sửa giao dịch settle"><i class="fa-regular fa-pen-to-square"></i></button>` : `<button onclick="openEdit('${esc(e.id)}')" class="ibtn" aria-label="Sửa khoản chi"><i class="fa-regular fa-pen-to-square"></i></button>`}<button onclick="deleteExpense('${esc(e.id)}')" class="ibtn del" aria-label="Xóa khoản chi"><i class="fa-regular fa-trash-can"></i></button>` : ''}</td>`;
 
       let bdy = bills.map(e => {
         const det = parseSplit(e);
@@ -2633,7 +2823,7 @@
                   <button class="btn soft sm" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>`;
         } else {
           recvLine = `<i class="fa-solid fa-mobile-screen" style="color:var(--brand);"></i> MoMo ${info.accName ? esc(info.accName) + ', ' : ''}<b>${esc(info.phone)}</b>`;
-          btns = `<a class="btn momo sm" href="${momoLink(info.phone, t.amount)}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Mở app MoMo</a>
+          btns = `<a class="btn momo sm" href="${momoLink(info.phone, t.amount)}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up"></i> Mở app MoMo</a>
                   <button class="btn soft sm" onclick="copyText('${esc(info.phone)}')"><i class="fa-regular fa-copy"></i> SĐT</button>
                   <button class="btn soft sm" onclick="copyText('${t.amount}')"><i class="fa-regular fa-copy"></i> Số tiền</button>
                   <button class="btn soft sm" onclick="copyText('${esc(transferNote(t))}')"><i class="fa-regular fa-copy"></i> Nội dung</button>`;
@@ -2649,6 +2839,7 @@
             ${btns}
             <button class="btn ok sm" onclick="markPaid(${i})"><i class="fa-solid fa-check"></i> Đã trả</button>
             <button class="btn soft sm" onclick="openManual(${i})"><i class="fa-solid fa-shuffle"></i> Trả cách khác</button>
+            ${t.from !== mine ? `<button class="btn soft sm" onclick="remind('${esc(t.from)}')"><i class="fa-regular fa-bell"></i> Nhắc ${esc(t.from)}</button>` : ''}
           </div>
         </div>`;
       }).join('');
@@ -2656,6 +2847,7 @@
       body.innerHTML = `<p class="hint" style="margin-bottom:12px;">Chỉ cần ${transfers.length} giao dịch là cả nhóm hết nợ. Chuyển xong thì bấm <b>Đã trả</b> để ghi vào bảng.</p>
         ${cards}
         ${manualHtml()}
+        <button class="btn soft block" style="margin-top:10px;" onclick="remind('')"><i class="fa-regular fa-bell"></i> Nhắc mọi người còn nợ (app + email)</button>
         <button class="btn soft block" style="margin-top:10px;" onclick="copySummary()"><i class="fa-regular fa-copy"></i> Sao chép tóm tắt để gửi nhóm</button>`;
     }
 
